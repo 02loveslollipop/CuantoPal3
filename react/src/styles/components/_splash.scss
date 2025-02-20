@@ -1,0 +1,22 @@
+.splash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: $ios-background;
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  
+    &__content {
+      animation: scale-up 0.3s ease-out;
+    }
+  
+    &__icon {
+      width: 120px;
+      height: 120px;
+      object-fit: contain;
+    }
+  }

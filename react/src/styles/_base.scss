@@ -1,0 +1,28 @@
+@import 'variables';
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  
+  html, body {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: $ios-background;
+  }
+
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: $ios-background;
+    
+    &__content {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 76px; // Extra padding for bottom navigation
+    }
+  }

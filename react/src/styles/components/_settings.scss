@@ -1,0 +1,102 @@
+.settings {
+    @include ios-font;
+    
+    background-color: $ios-background;
+    position: absolute;
+
+    &*
+    {
+      background-color: $ios-background;
+    }
+    
+    &__container {
+      position: absolute;
+
+      top: 0;
+      padding: 20px 0;
+      padding-top: 64px; // Account for nav bar
+      //padding to the bottom of the screen
+      padding-bottom: calc(-webkit-fill-available - 44px);
+      background-color: $ios-background;
+      overflow-y: hidden;
+      width: 100vw;
+      
+    }
+  
+    &__header {
+      padding: 0 16px;
+      margin-bottom: 8px;
+    }
+  
+    &__title {
+      color: $ios-text-label;
+      font-size: 20px;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+  
+    &__group {
+      background-color: $ios-element-background;
+      border-top: 1px solid $ios-border;
+      border-bottom: 1px solid $ios-border;
+    }
+  
+    &__row {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      min-height: 44px;
+      position: relative;
+  
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 0;
+        height: 1px;
+        background-color: $ios-border;
+      }
+  
+      &:active {
+        background-color: $ios-background;
+      }
+    }
+  
+    &__label {
+      flex: 0 0 160px;
+      color: $ios-text-primary;
+      font-size: 17px;
+    }
+  
+    &__input {
+      flex: 1;
+      border: none;
+      padding: 0 8px;
+      font-size: 17px;
+      color: $ios-text-primary;
+      text-align: right;
+      background: none;
+      width: 100%;
+  
+      &:focus {
+        outline: none;
+      }
+  
+      &::placeholder {
+        color: #c7c7cc;
+      }
+    }
+  }
+  
+  // animations/_keyframes.scss
+  @keyframes scale-up {
+    0% {
+      transform: scale(1.2);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }

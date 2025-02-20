@@ -1,0 +1,79 @@
+.alert {
+    &__overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      @include ios-font;
+    }
+  
+    &__container {
+      background-color: $ios-background;
+      border-radius: 14px;
+      width: 270px;
+      overflow: hidden;
+      animation: scale-up 0.3s ease-out;
+    }
+  
+    &__content {
+      padding: 18px 16px;
+      text-align: center;
+    }
+  
+    &__title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: $ios-text-primary;
+    }
+  
+    &__message {
+      font-size: 13px;
+      color: $ios-text-secondary;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+  
+    &__actions {
+      display: flex;
+      border-top: 1px solid $ios-border;
+    }
+  
+    &__button {
+      flex: 1;
+      padding: 12px;
+      font-size: 17px;
+      border: none;
+      background: none;
+      color: $ios-blue;
+      cursor: pointer;
+      font-weight: 400;
+      transition: background-color 0.2s;
+  
+      &:not(:last-child) {
+        border-right: 1px solid $ios-border;
+      }
+  
+      &--cancel {
+        font-weight: 600;
+      }
+  
+      &--destructive {
+        color: $ios-red;
+      }
+
+      &--single {
+        font-weight: 600;
+      }
+  
+      &:active {
+        background-color: rgba(0, 0, 0, 0.1);
+      }
+    }
+  }

@@ -1,0 +1,153 @@
+.home {
+    background-color: $ios-background;
+    position: absolute;
+    
+    &__container {
+      position: absolute;
+      top: 0;
+      padding: 20px 0;
+      padding-top: 64px; // Account for nav bar
+      padding-bottom: calc(-webkit-fill-available - 44px);
+      background-color: $ios-background;
+      overflow-y: auto;
+      width: 100vw;
+    }
+  
+    &__header {
+      padding: 0 16px;
+      margin-bottom: 16px;
+    }
+  
+    &__title {
+      color: $ios-blue;
+      font-size: 20px;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+  
+    &__grades-container {
+      background-color: $ios-element-background;
+      border-top: 1px solid $ios-border;
+      border-bottom: 1px solid $ios-border;
+    }
+  
+    &__grade-row {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      min-height: 44px;
+      position: relative;
+      gap: 16px;
+
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 0;
+        height: 1px;
+        background-color: $ios-border;
+      }
+    }
+  
+    &__input-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      position: relative;
+  
+      label {
+        font-size: 12px;
+        color: $ios-secondary-label;
+        margin-bottom: 4px;
+      }
+    }
+  
+    &__input {
+      border: none;
+      font-size: 17px;
+      color: $ios-text-primary;
+      background: none;
+      width: 100%;
+      padding-right: 24px;
+  
+      &:focus {
+        outline: none;
+      }
+  
+      &::placeholder {
+        color: #c7c7cc;
+      }
+    }
+  
+    &__percentage {
+      position: absolute;
+      right: 8px;
+      bottom: 0;
+      color: $ios-secondary-label;
+      font-size: 17px;
+    }
+  
+    &__add-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: $ios-blue;
+        background: none;
+        border: none;
+        width: fit-content;
+        padding: 16px 64px;
+        margin: 24px auto 0;
+        font-size: 17px;
+    
+        &:active {
+          opacity: 0.7;
+        }
+      }
+    
+      &__calculate-button {
+        background-color: $ios-blue;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 64px;
+        margin: 8px auto;
+        font-weight: 600;
+        font-size: 17px;
+        width: calc(100% - 168px);
+        max-width: 400px;
+        display: block;
+    
+        &:active {
+          opacity: 0.7;
+        }
+      }
+  
+    &__remove-button {
+      background: none;
+      border: none;
+      color: $ios-red;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+  
+      &:active {
+        opacity: 0.7;
+      }
+    }
+}
+
+// Add keyframes animation from settings
+@keyframes scale-up {
+  0% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

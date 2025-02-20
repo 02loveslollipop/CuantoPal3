@@ -1,0 +1,53 @@
+.nav-bar {
+    @include ios-font;
+    @include ios-blur;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(248, 248, 248, 0.92);
+    height: 44px;
+    padding: 0 12px;
+    border-bottom: 1px solid $ios-border;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  
+    &__title {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 17px;
+      font-weight: 600;
+      color: $ios-text-primary;
+    }
+  
+    &__button {
+      background: none;
+      border: none;
+      padding: 0px;
+      color: $ios-blue;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+  
+      &:active {
+        opacity: 0.6;
+      }
+  
+      .back-icon {
+        width: 24px;
+        height: 24px;
+        fill: $ios-blue;
+      }
+
+      .second-icon {
+        width: 24px;
+        height: 24px;
+        fill: $ios-blue;
+      }
+    }
+  }

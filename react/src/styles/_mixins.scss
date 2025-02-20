@@ -1,0 +1,8 @@
+@mixin ios-font {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  @mixin ios-blur {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }

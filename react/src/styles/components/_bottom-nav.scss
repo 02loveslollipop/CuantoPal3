@@ -1,0 +1,48 @@
+.bottom-nav {
+    @include ios-font;
+    @include ios-blur;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: rgba(248, 248, 248, 0.92);
+    height: 50px;
+    border-top: 1px solid $ios-border;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+  
+    &__item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 6px 0;
+      min-width: 80px;
+      text-decoration: none;
+      color: $ios-inactive;
+      transition: color 0.2s;
+      border: none;
+      background: none;
+      cursor: pointer;
+  
+      &--active {
+        color: $ios-blue;
+      }
+    }
+  
+    &__icon {
+      height: 24px;
+      width: 24px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  
+    &__label {
+      font-size: 10px;
+      font-weight: 500;
+    }
+  }
