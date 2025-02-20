@@ -123,7 +123,7 @@ export const App = () => {
       <Alert
         isVisible={showFirstTimeAlert}
         title="Parece que es la primera vez que usas esta App"
-        message="Para utilizer de manera corecta esta App es necesario configurarla para calcular las notas de manera correcta."
+        message="Para utilizar esta App es necesario configurarla para calcular las notas de manera correcta."
         confirmLabel="Configurar"
         showCancel={false}
         onConfirm={handleFirstTimeAlert}
