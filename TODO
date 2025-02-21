@@ -1,0 +1,5 @@
+- Add load functionality when load button pressed
+- Create Save screen and save functionality
+- Create result screen
+- Add functionality to the result screen
+- Make the abstraction of the grades in the main screen to be stored in the subject class
