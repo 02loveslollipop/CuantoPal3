@@ -14,6 +14,7 @@ export const App = () => {
   const [showFirstTimeAlert, setShowFirstTimeAlert] = useState(false);
   const [activeNavIndex, setActiveNavIndex] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showReturn, setShowReturn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [settings, setSettings] = useState({
     minAcceptValue: 0.5,
@@ -58,6 +59,12 @@ export const App = () => {
       onClick: () => setActiveNavIndex(2)
     }
   ];
+
+  const handleOnAction = () => {
+    if (!showSettings) swtShowReturn(true);
+    else setShowReturn(false);
+    setShowSettings(!showSettings);
+  }
 
   const handleFirstTimeAlert = async () => {
     await localStorage.setItem("isFirstTime", "false");
@@ -104,8 +111,9 @@ export const App = () => {
     <div className="app">
       <NavigationBar
         title={showSettings ? "Configuracion" : "Cuanto Pal 3"}
+        hasBack={showReturn}
         onBack={handleBack}
-        onAction={() => setShowSettings(true)}
+        onAction={handleOnAction}
         icon={Settings}
         hasIcon={!showSettings}
       />
