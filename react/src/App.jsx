@@ -61,9 +61,9 @@ export const App = () => {
   ];
 
   const handleOnAction = () => {
-    if (!showSettings) swtShowReturn(true);
+    if (!showSettings) setShowReturn(true);
     else setShowReturn(false);
-    setShowSettings(!showSettings);
+    setShowSettings(true);
   }
 
   const handleFirstTimeAlert = async () => {
@@ -75,6 +75,7 @@ export const App = () => {
   const handleBack = () => {
     //TODO: Make that the back button goes back to the previous screen if screen is not the home screen
     if (showSettings) {
+      setShowReturn(false);
       setShowSettings(false);
     } else {
       window.history.back();
