@@ -1,5 +1,8 @@
 # Cuanto pal 3
 
+![HomeCuantoPal3](./imgs/mobile_app_home.png)
+
+
 > A web/mobile application that allows you to calculate the grade you need to pass a course.
 
 # Requirements
