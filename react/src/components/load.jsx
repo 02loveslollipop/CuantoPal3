@@ -3,13 +3,17 @@ import { SubjectsManager } from '../utils/subjectManager';
 import { Download } from 'lucide-react';
 import { truncateString } from '../utils/Utils';
 
-export const Load = () => {
+export const Load = ({
+        setActiveNavIndex
+    }) => {
     const subjectManager = SubjectsManager.getInstance();
     const subjects = subjectManager.getAllSubjectNames();
 
     const handleLoad = (subjectName) => {
+        console.log(`Loading subject: ${subjectName}`); //TODO: Remove this line
         subjectManager.setCurrentSubject(subjectName);
-        // Additional loading logic here
+        // Return to home
+        setActiveNavIndex(0);
     };
 
     return (

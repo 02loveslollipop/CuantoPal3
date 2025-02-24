@@ -100,7 +100,7 @@ export const App = () => {
       case 0:
         return <Home />;
       case 1:
-        return <Load />;
+        return <Load setActiveNavIndex={setActiveNavIndex} />;
       case 2:
         return <div>Save Screen</div>;
       default:
