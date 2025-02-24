@@ -80,4 +80,16 @@ export class SubjectsManager {
             this.saveToStorage();
         }
     }
+
+    public saveCurrentSubject(name: string): void {
+        const currentSubject = this._currentSubject.getCurrentSubject();
+        if (currentSubject) {
+            const newSubject = new Subject(name);
+            currentSubject.grades.forEach(grade => {
+                newSubject.addGrade(grade);
+            });
+            this._subjects.set(name, newSubject);
+            this.saveToStorage();
+        }
+    }
 }
