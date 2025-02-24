@@ -1,13 +1,14 @@
 import { Subject, IGrade } from './Subject';
+import { CurrentSubject } from './CurrentSubject';
 
 export class SubjectsManager {
     private static instance: SubjectsManager;
     private _subjects: Map<string, Subject>;
-    private _currentSubject: Subject | null;
+    private _currentSubject: CurrentSubject;
 
     private constructor() {
         this._subjects = new Map();
-        this._currentSubject = null;
+        this._currentSubject = CurrentSubject.getInstance();
         this.loadFromStorage();
     }
 
@@ -45,7 +46,7 @@ export class SubjectsManager {
     public createSubject(name: string): Subject {
         const subject = new Subject(name);
         this._subjects.set(name, subject);
-        this._currentSubject = subject;
+        this._currentSubject.setCurrentSubject(subject);
         this.saveToStorage();
         return subject;
     }
@@ -53,13 +54,13 @@ export class SubjectsManager {
     public setCurrentSubject(name: string): Subject | null {
         const subject = this._subjects.get(name);
         if (subject) {
-            this._currentSubject = subject;
+            this._currentSubject.setCurrentSubject(subject);
         }
         return subject || null;
     }
 
     public getCurrentSubject(): Subject | null {
-        return this._currentSubject;
+        return this._currentSubject.getCurrentSubject();
     }
 
     public getAllSubjectNames(): string[] {
@@ -73,8 +74,8 @@ export class SubjectsManager {
     public deleteSubject(name: string): void {
         if (this._subjects.has(name)) {
             this._subjects.delete(name);
-            if (this._currentSubject?.name === name) {
-                this._currentSubject = null;
+            if (this._currentSubject.getCurrentSubject()?.name === name) {
+                this._currentSubject.setCurrentSubject(new Subject(''));
             }
             this.saveToStorage();
         }
