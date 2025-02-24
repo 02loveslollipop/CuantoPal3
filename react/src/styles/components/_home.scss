@@ -1,4 +1,5 @@
 .home {
+    @include ios-font;
     background-color: $ios-background;
     position: absolute;
     

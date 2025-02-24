@@ -1,0 +1,99 @@
+.save {
+    @include ios-font;
+    background-color: $ios-background;
+    
+    &__container {
+        position: absolute;
+        top: 0;
+        padding: 20px 0;
+        padding-top: 64px;
+        padding-bottom: calc(-webkit-fill-available - 44px);
+        background-color: $ios-background;
+        overflow-y: auto;
+        width: 100vw;
+    }
+
+    &__header {
+        padding: 0 16px;
+        margin-bottom: 8px;
+    }
+
+    &__title {
+        color: $ios-text-label;
+        font-size: 20px;
+        letter-spacing: 0.04em;
+        font-weight: 600;
+    }
+
+    &__input-container {
+        background-color: $ios-element-background;
+        border-top: 1px solid $ios-border;
+        border-bottom: 1px solid $ios-border;
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        padding: 11px 16px;
+        min-height: 44px;
+        width: 100%;
+        position: relative;
+        
+        &:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            bottom: 0;
+            height: 1px;
+            background-color: $ios-border;
+        }
+    }
+
+    &__input-group {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+
+        label {
+            font-size: 12px;
+            color: $ios-text-secondary;
+            margin-bottom: 4px;
+        }
+    }
+
+    &__input {
+        border: none;
+        font-size: 17px;
+        color: $ios-text-primary;
+        background: none;
+        width: 100%;
+        text-align: left;
+
+        &:focus {
+            outline: none;
+        }
+
+        &::placeholder {
+            color: $ios-text-secondary;
+        }
+    }
+
+    &__button {
+        background-color: $ios-blue;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 64px;
+        margin: 24px auto;
+        font-weight: 600;
+        font-size: 17px;
+        width: calc(100% - 168px);
+        max-width: 400px;
+        display: block;
+
+        &:active {
+            opacity: 0.7;
+        }
+    }
+}
