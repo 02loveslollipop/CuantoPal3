@@ -1,19 +1,25 @@
 import React from 'react';
 import { SubjectsManager } from '../utils/subjectManager';
-import { Download } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 import { truncateString } from '../utils/Utils';
 
 export const Load = ({
-        setActiveNavIndex
-    }) => {
+    setActiveNavIndex
+}) => {
     const subjectManager = SubjectsManager.getInstance();
     const subjects = subjectManager.getAllSubjectNames();
 
-    const handleLoad = (subjectName) => {
-        console.log(`Loading subject: ${subjectName}`); //TODO: Remove this line
+    const handleLoad = (subjectName, event) => {
+        event.stopPropagation();
         subjectManager.setCurrentSubject(subjectName);
-        // Return to home
         setActiveNavIndex(0);
+    };
+
+    const handleDelete = (subjectName, event) => {
+        event.stopPropagation();
+        subjectManager.deleteSubject(subjectName);
+        // Force re-render
+        setActiveNavIndex(3);
     };
 
     return (
@@ -24,14 +30,28 @@ export const Load = ({
             
             <div className="load__group">
                 {subjects.map((subjectName) => (
-                    <button
+                    <div
                         key={subjectName}
                         className="load__row"
-                        onClick={() => handleLoad(subjectName)}
                     >
                         <span className="load__label">{truncateString(subjectName)}</span>
-                        <Download size={20} className="load__icon" />
-                    </button>
+                        <div className="load__actions">
+                            <button 
+                                className="load__load-button"
+                                onClick={(e) => handleLoad(subjectName, e)}
+                                aria-label="Load subject"
+                            >
+                                <Download size={20} className="load__icon" />
+                            </button>
+                            <button 
+                                className="load__remove-button"
+                                onClick={(e) => handleDelete(subjectName, e)}
+                                aria-label="Remove subject"
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                        </div>
+                    </div>
                 ))}
                 
                 {subjects.length === 0 && (

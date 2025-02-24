@@ -38,9 +38,9 @@
         padding: 11px 16px;
         min-height: 44px;
         width: 100%;
-        border: none;
         background: none;
         position: relative;
+        cursor: pointer;
         
         &:not(:last-child)::after {
             content: '';
@@ -56,11 +56,46 @@
             background-color: $ios-background;
         }
     }
+
+    &__load-button {
+        background: none;
+        border: none;
+        color: $ios-blue;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+
+        &:active {
+            opacity: 0.7;
+        }
+    }
     
     &__label {
         color: $ios-text-primary;
         font-size: 17px;
         text-align: left;
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    &__remove-button {
+        background: none;
+        border: none;
+        color: $ios-red;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:active {
+            opacity: 0.7;
+        }
     }
     
     &__icon {
