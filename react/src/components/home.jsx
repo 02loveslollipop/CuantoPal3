@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { CurrentSubject } from '../utils/CurrentSubject';
+import { Subject } from '../utils/Subject';
 
 const maxGrades = 100;
 
@@ -7,6 +9,25 @@ export const Home = () => {
   const [grades, setGrades] = useState([
     { id: 1, percentage: '', grade: '' }
   ]);
+
+  useEffect(() => {
+    // Initialize CurrentSubject if not exists
+    const currentSubject = CurrentSubject.getInstance();
+    if (!currentSubject.getCurrentSubject()) {
+      currentSubject.setCurrentSubject(new Subject('Current Course'));
+    }
+
+    // Load existing grades from CurrentSubject
+    const subject = currentSubject.getCurrentSubject();
+    if (subject && subject.grades.length > 0) {
+      const loadedGrades = subject.grades.map((grade, index) => ({
+        id: index + 1,
+        percentage: grade.percentage,
+        grade: grade.value
+      }));
+      setGrades(loadedGrades);
+    }
+  }, []);
 
   const handleAddGrade = () => {
     if (grades.length < maxGrades) {
@@ -16,28 +37,53 @@ export const Home = () => {
         grade: ''
       };
       setGrades([...grades, newGrade]);
+      updateCurrentSubject([...grades, newGrade]);
     }
   };
 
   const handleChange = (id, field, value) => {
-    setGrades(grades.map(grade => 
+    const updatedGrades = grades.map(grade => 
       grade.id === id ? {...grade, [field]: value} : grade
-    ));
+    );
+    setGrades(updatedGrades);
+    updateCurrentSubject(updatedGrades);
   };
 
   const handleRemoveGrade = (id) => {
+    let updatedGrades;
     if (grades.length === 1) {
-      // If it's the last grade, reset it to empty
-      setGrades([{ id: 1, percentage: '', grade: '' }]);
+      updatedGrades = [{ id: 1, percentage: '', grade: '' }];
     } else {
-      // Remove the grade and reindex remaining grades
-      const filteredGrades = grades
+      updatedGrades = grades
         .filter(grade => grade.id !== id)
         .map((grade, index) => ({
           ...grade,
           id: index + 1
         }));
-      setGrades(filteredGrades);
+    }
+    setGrades(updatedGrades);
+    updateCurrentSubject(updatedGrades);
+  };
+
+  const updateCurrentSubject = (updatedGrades) => {
+    const currentSubject = CurrentSubject.getInstance();
+    const subject = currentSubject.getCurrentSubject();
+    
+    if (subject) {
+      // Clear existing grades
+      while (subject.grades.length > 0) {
+        subject.removeGrade(0);
+      }
+
+      // Add new grades
+      updatedGrades.forEach(grade => {
+        if (grade.percentage !== '' && grade.grade !== '') {
+          subject.addGrade({
+            percentage: Number(grade.percentage),
+            value: Number(grade.grade)
+          });
+        }
+      });
     }
   };
 
