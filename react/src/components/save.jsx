@@ -10,13 +10,10 @@ export const Save = ({
     const handleSave = () => {
         if (subjectName.trim() === '') return;
 
-        const currentSubject = CurrentSubject.getInstance().getCurrentSubject();
         const subjectManager = SubjectsManager.getInstance();
-
-        if (currentSubject) {
-            subjectManager.saveSubject(subjectName, currentSubject);
-            setActiveNavIndex(0); // Return to home
-        }
+        subjectManager.saveCurrentSubject(subjectName);
+        setActiveNavIndex(0); // Return to home
+        
     };
 
     return (
