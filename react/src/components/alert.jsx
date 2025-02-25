@@ -27,7 +27,7 @@ export const Alert = ({
               className="alert__button alert__button--cancel" 
               onClick={onCancel}
             >
-              Cancel
+              Cancelar
             </button>
           )}
           <button 
