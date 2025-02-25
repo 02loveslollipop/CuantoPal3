@@ -71,6 +71,10 @@ export class SubjectsManager {
         return this._subjects.get(name) || null;
     }
 
+    public subjetExists(name: string): boolean {
+        return this._subjects.has(name);
+    }
+
     public deleteSubject(name: string): void {
         if (this._subjects.has(name)) {
             this._subjects.delete(name);
