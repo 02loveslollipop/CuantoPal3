@@ -89,6 +89,10 @@ export class Subject {
         };
     }
 
+    public isEmpty(): boolean {
+        return this._grades.length === 0;
+    }
+
     // Getters
     get name(): string {
         return this._name;

@@ -5,7 +5,7 @@ export class CurrentSubject {
     private _currentSubject: Subject | null;
 
     private constructor() {
-        this._currentSubject = null;
+        this._currentSubject = new Subject("");
     }
 
     public static getInstance(): CurrentSubject {
