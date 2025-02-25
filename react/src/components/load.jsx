@@ -6,6 +6,7 @@ import { truncateString } from '../utils/Utils';
 export const Load = ({
     setActiveNavIndex
 }) => {
+    const [refreshKey, setRefreshKey] = React.useState(0);
     const subjectManager = SubjectsManager.getInstance();
     const subjects = subjectManager.getAllSubjectNames();
 
@@ -19,7 +20,7 @@ export const Load = ({
         event.stopPropagation();
         subjectManager.deleteSubject(subjectName);
         // Force re-render
-        setActiveNavIndex(3);
+        setRefreshKey(prev => prev + 1);
     };
 
     return (
