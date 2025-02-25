@@ -86,7 +86,6 @@ export const App = () => {
   };
 
   const handleBack = () => {
-    //TODO: Make that the back button goes back to the previous screen if screen is not the home screen
     if (showSettings) {
       setShowReturn(false);
       setShowSettings(false);
