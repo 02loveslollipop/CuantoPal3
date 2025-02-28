@@ -65,6 +65,26 @@ export const Home = () => {
     updateCurrentSubject(updatedGrades);
   };
 
+  const handleCalculate = () => {
+    const currentSubject = CurrentSubject.getInstance();
+    const subject = currentSubject.getCurrentSubject();
+    
+    if (subject) {
+      subject.calculateFinalGrade();
+      const totalPercentage = subject.totalPercentage();
+      const currentGrades = subject.grades;
+      const requiredPercentage = subject.remainingPercentage();
+      const requiredGrade = subject.calculateRequiredGrade();
+
+      //TODO: push to result page
+      console.log('Total Percentage:', totalPercentage);
+      console.log('Current Grades:', currentGrades);
+      console.log('Required Percentage:', requiredPercentage);
+      console.log('Required Grade:', requiredGrade);
+    
+    }
+  }
+
   const updateCurrentSubject = (updatedGrades) => {
     const currentSubject = CurrentSubject.getInstance();
     const subject = currentSubject.getCurrentSubject();
@@ -147,7 +167,9 @@ export const Home = () => {
         </button>
       )}
 
-      <button className="home__calculate-button">
+      <button 
+        className="home__calculate-button">
+        onClick={handleCalculate}
         Calcular
       </button>
     </div>
