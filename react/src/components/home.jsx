@@ -119,20 +119,6 @@ export const Home = () => {
         {grades.map((grade) => (
           <div key={grade.id} className="home__grade-row">
             <div className="home__input-group">
-              <label>Porcentaje</label>
-              <input 
-                type="number"
-                min="0"
-                max="100"
-                value={grade.percentage}
-                onChange={(e) => handleChange(grade.id, 'percentage', e.target.value)}
-                className="home__input"
-                placeholder="0"
-              />
-              <span className="home__percentage">%</span>
-            </div>
-
-            <div className="home__input-group">
               <label>Nota</label>
               <input
                 type="number"
@@ -144,6 +130,19 @@ export const Home = () => {
                 className="home__input"
                 placeholder="0.0"
               />
+            </div>
+            <div className="home__input-group">
+              <label>Porcentaje</label>
+              <input 
+                type="number"
+                min="0"
+                max="100"
+                value={grade.percentage}
+                onChange={(e) => handleChange(grade.id, 'percentage', e.target.value)}
+                className="home__input"
+                placeholder="0"
+              />
+              <span className="home__percentage">%</span>
             </div>
 
             <button 
