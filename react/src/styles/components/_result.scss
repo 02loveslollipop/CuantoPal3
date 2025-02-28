@@ -1,93 +1,136 @@
-@import '../variables';
-@import '../mixins';
-
-.resultado-ganar {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: rgba(52, 199, 89, 1);
+.result {
+  @include ios-font;
+  background-color: $ios-background;
+  position: absolute;
   
-  .nav-bar {
+  &__container {
     display: flex;
-    align-items: center;
-    height: 44px;
-    background-color: rgba(248, 248, 248, 1);
-    border-bottom: 1px solid rgba(200, 199, 204, 1);
-    padding: 0 10px;
-    position: relative;
-    
-    .back-section {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      
-      .back-icon {
-        color: rgba(0, 122, 255, 1);
-        width: 18px;
-        height: 15px;
-      }
-      
-      .back-text {
-        color: rgba(0, 122, 255, 1);
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: bold;
-        font-size: 17px;
-        margin-left: 6px;
-      }
+    top: 0;
+    padding: 20px 0px;
+    padding-top: 64px; // Account for nav bar
+    padding-bottom: calc(-webkit-fill-available - 44px);
+    //background-color: rgba(52, 199, 89, 1); // Keep this green background
+    overflow-y: auto;
+    width: 100vw;
+    height: 100vh;
+    animation: scale-up 0.3s ease-out forwards;
+
+    &__red{
+        display: flex;
+        top: 0;
+        padding: 20px 0px;
+        padding-top: 64px; // Account for nav bar
+        padding-bottom: calc(-webkit-fill-available - 44px);
+        background-color: rgba(246, 52, 40, 1);
+        height: 100vh;
+        width: 100vw;
+        overflow-y: auto;
+        animation: scale-up 0.3s ease-out forwards;
     }
-    
-    .title {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      font-family: 'Segoe UI', sans-serif;
-      font-weight: bold;
-      font-size: 17px;
-      color: rgba(0, 0, 0, 1);
+
+    &__green{
+        display: flex;
+        top: 0;
+        padding: 20px 0px;
+        padding-top: 64px; // Account for nav bar
+        padding-bottom: calc(-webkit-fill-available - 44px);
+        background-color: rgba(52, 199, 89, 1);
+        height: 100vh;
+        width: 100vw;
+        overflow-y: auto;
+        animation: scale-up 0.3s ease-out forwards;
     }
   }
   
-  .content {
+  &__content {
     flex: 1;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
+  }
+  
+  &__card {
+    background-color: $ios-element-background;
+    border-radius: 12px; // Match home's rounded corners style
+    width: 100%;
+    max-width: 400px; // Match home's max-width
+    padding: 26px 24px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin: 0 auto;
+    border-top: 1px solid $ios-border;
+    border-bottom: 1px solid $ios-border;
     
-    .result-card {
-      background-color: white;
-      border-radius: 32px;
-      width: 320px;
-      padding: 26px 24px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      
-      .congratulations {
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: bold;
-        font-size: 28px;
-        color: rgba(91, 91, 91, 1);
-        margin-bottom: 20px;
-        text-align: center;
-      }
-      
-      .needed-score {
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: bold;
-        font-size: 24px;
-        color: rgba(91, 91, 91, 1);
-        text-align: center;
-        margin-bottom: 16px;
-      }
-      
-      .current-average {
-        font-family: 'Segoe UI', sans-serif;
-        font-weight: bold;
-        font-size: 20px;
-        color: rgba(135, 135, 135, 1);
-        text-align: center;
-      }
+    &-title {
+      font-weight: bold;
+      font-size: 28px;
+      color: $ios-text-primary;
+      margin-bottom: 20px;
+      text-align: center;
     }
+    
+    &-needed {
+      font-weight: bold;
+      font-size: 24px;
+      color: $ios-text-primary;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    
+    &-current {
+      font-weight: bold;
+      font-size: 20px;
+      color: $ios-secondary-label;
+      text-align: center;
+    }
+  }
+  
+  &__back-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: $ios-blue;
+    background: none;
+    border: none;
+    width: fit-content;
+    padding: 16px 64px;
+    margin: 24px auto 0;
+    font-size: 17px;
+    
+    &:active {
+      opacity: 0.7;
+    }
+  }
+
+  // Add a calculate-again button styled like home's calculate button
+  &__calculate-again-button {
+    background-color: $ios-blue;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 64px;
+    margin: 8px auto;
+    font-weight: 600;
+    font-size: 17px;
+    width: calc(100% - 168px);
+    max-width: 400px;
+    display: block;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Use the same keyframes animation as in home
+@keyframes scale-up {
+  0% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
