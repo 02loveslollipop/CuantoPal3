@@ -35,11 +35,6 @@ export class Subject {
         // Calculate required grade for remaining percentage
         const requiredGrade = (minAcceptValue * 100 - currentWeightedSum) / this.remainingPercentage;
 
-        // Validate if the required grade is achievable
-        if (requiredGrade < minValue || requiredGrade > maxValue) {
-            return null;
-        }
-
         return Number(requiredGrade.toFixed(1));
     }
 
@@ -112,5 +107,9 @@ export class Subject {
 
     get remainingPercentage(): number {
         return 100 - this.totalPercentage;
+    }
+
+    get requiredGrade(): number | null {
+        return this.calculateRequiredGrade();
     }
 }
