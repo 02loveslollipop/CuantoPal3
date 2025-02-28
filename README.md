@@ -13,10 +13,10 @@
 - `lucide-react >= 0.475.0`
 
 # Wireframe
-    https://www.figma.com/design/DCOEKOjael3tFWLQQzgqd7/Untitled?node-id=0-1&p=f&t=DkIWzpQ9KEjyD6b7-0
+[Haz click aquí para ver el wireframe](https://www.figma.com/design/DCOEKOjael3tFWLQQzgqd7/Untitled?node-id=0-1&p=f&t=DkIWzpQ9KEjyD6b7-0)
 
 # Prototype
-    https://xd.adobe.com/view/93401274-7dd9-4206-91bf-7a6168d5d6ee-c613/screen/b1c4822b-be1e-4550-a486-861124afac73/
+[Haz click aquí para ver el prototype](https://xd.adobe.com/view/93401274-7dd9-4206-91bf-7a6168d5d6ee-c613/screen/b1c4822b-be1e-4550-a486-861124afac73/)
 
 # Installation
 1. Clone the repository
