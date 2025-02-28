@@ -2,7 +2,6 @@
 
 ![HomeCuantoPal3](./imgs/mobile_app_home.png)
 
-
 > A web/mobile application that allows you to calculate the grade you need to pass a course.
 
 # Requirements
@@ -12,6 +11,12 @@
 - `sass >= 1.85.0`
 - `react >= 19.0.0`
 - `lucide-react >= 0.475.0`
+
+# Wireframe
+[Haz click aquí para ver el wireframe](https://www.figma.com/design/DCOEKOjael3tFWLQQzgqd7/Untitled?node-id=0-1&p=f&t=DkIWzpQ9KEjyD6b7-0)
+
+# Prototype
+[Haz click aquí para ver el prototype](https://xd.adobe.com/view/93401274-7dd9-4206-91bf-7a6168d5d6ee-c613/screen/b1c4822b-be1e-4550-a486-861124afac73/)
 
 # Installation
 1. Clone the repository
@@ -31,6 +36,6 @@ npm install
 
 4. Run the application as a development server
 ```bash
-npm start
+npm run dev
 ```
 
