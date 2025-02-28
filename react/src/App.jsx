@@ -10,6 +10,7 @@ import { Alert } from './components/alert';
 import { SettingsManager } from './utils/settingsManager';
 import { fillLocalStorage } from './utils/Utils';
 import { HomeIcon, Download, Save, Settings } from 'lucide-react';
+import { Result } from './components/result';
 import './styles/main.scss';
 
 export const App = () => {
@@ -23,6 +24,8 @@ export const App = () => {
     minValue: 0,
     maxValue: 100
   });
+  const [showResult, setShowResult] = useState(false);
+
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -84,11 +87,22 @@ export const App = () => {
     setShowSettings(true);
     setShowReturn(true);
   };
+  
+  const onCalculate = () => {
+    setShowResult(true);
+    setShowReturn(true);
+    setShowSettings(false);
+  }
 
   const handleBack = () => {
     if (showSettings) {
       setShowReturn(false);
       setShowSettings(false);
+
+    } else if (showResult) {
+      setShowResult(false)
+      setShowReturn(false);
+      setShowReturn(false);
     } else {
       window.history.back();
     }
@@ -108,9 +122,13 @@ export const App = () => {
       );
     }
 
+    if (showResult) {
+      return <Result/>;
+    }
+
     switch (activeNavIndex) {
       case 0:
-        return <Home />;
+        return <Home onCalculate={onCalculate} />;
       case 1:
         return <Load setActiveNavIndex={setActiveNavIndex} />;
       case 2:
@@ -119,6 +137,9 @@ export const App = () => {
         return <Home />;
     }
   };
+
+  //if ShowSetting is true or showResult is true disable the bottom navigation
+  const showBotom = !showSettings && !showResult;
 
   return (
     <div className="app">
@@ -135,7 +156,7 @@ export const App = () => {
         {renderContent()}
       </main>
 
-      {!showSettings && (
+      {showBotom && (
         <BottomNavigation
           items={navItems}
           activeIndex={activeNavIndex}

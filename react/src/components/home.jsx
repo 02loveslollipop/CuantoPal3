@@ -5,7 +5,11 @@ import { Subject } from '../utils/Subject';
 
 const maxGrades = 100;
 
-export const Home = () => {
+export const Home = (
+  { 
+    onCalculate
+  }
+  ) => {
   const [grades, setGrades] = useState([
     { id: 1, percentage: '', grade: '' }
   ]);
@@ -71,14 +75,17 @@ export const Home = () => {
     
     if (subject) {
       subject.calculateFinalGrade();
-      const totalPercentage = subject.totalPercentage();
-      const currentGrades = subject.grades;
-      const requiredPercentage = subject.remainingPercentage();
-      const requiredGrade = subject.calculateRequiredGrade();
+      subject.calculateRequiredGrade();
+      const totalPercentage = subject.totalPercentage;
+      const finalGrade = subject.finalGrade;
+      const requiredPercentage = subject.remainingPercentage;
+      const requiredGrade = subject.requiredGrade;
 
-      //TODO: push to result page
+      //TODO: Check if the grades are in range and show an alert if not
+      //TODO: Check if the percentage is greater than 100 and show an alert if not
+      onCalculate()
       console.log('Total Percentage:', totalPercentage);
-      console.log('Current Grades:', currentGrades);
+      console.log('Current Grades:', finalGrade);
       console.log('Required Percentage:', requiredPercentage);
       console.log('Required Grade:', requiredGrade);
     
