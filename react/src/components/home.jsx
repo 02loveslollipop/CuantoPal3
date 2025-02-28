@@ -169,7 +169,7 @@ export const Home = () => {
 
       <button 
         className="home__calculate-button"
-        onClick="handleCalculate"
+        onClick={handleCalculate}
       >
         Calcular
       </button>
