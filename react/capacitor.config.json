@@ -1,0 +1,15 @@
+{
+  "appId": "uk.app02loveslollipop.cuantopal3",
+  "appName": "CuantoPal3",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "limitsNavigationsToAppBoundDomains": true
+  }
+}
