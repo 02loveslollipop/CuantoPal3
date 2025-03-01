@@ -140,6 +140,7 @@ export const App = () => {
 
   //if ShowSetting is true or showResult is true disable the bottom navigation
   const showBotom = !showSettings && !showResult;
+  const showSettingsIcon = !showSettings && !showResult;
 
   return (
     <div className="app">
@@ -149,7 +150,7 @@ export const App = () => {
         onBack={handleBack}
         onAction={handleOnAction}
         icon={Settings}
-        hasIcon={!showSettings}
+        hasIcon={showSettingsIcon}
       />
       
       <main className="app__content">
