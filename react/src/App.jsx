@@ -81,6 +81,11 @@ export const App = () => {
     setShowSettings(true);
   }
 
+  const handleToSettings = () => {
+    setShowSettings(true);
+    setShowReturn(true);
+  }
+
   const handleFirstTimeAlert = async () => {
     await localStorage.setItem("isFirstTime", "false");
     setShowFirstTimeAlert(false);
@@ -128,7 +133,7 @@ export const App = () => {
 
     switch (activeNavIndex) {
       case 0:
-        return <Home onCalculate={onCalculate} />;
+        return <Home onCalculate={onCalculate} toSettings={handleToSettings} />;
       case 1:
         return <Load setActiveNavIndex={setActiveNavIndex} />;
       case 2:
