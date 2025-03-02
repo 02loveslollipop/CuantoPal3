@@ -15,7 +15,7 @@
   "icons": [
     {
       "src": "favicon.ico",
-      "sizes": "32x32",
+      "sizes": "64x64",
       "type": "image/x-icon"
     },
     {
@@ -86,7 +86,7 @@
     },
     {
       "src": "maskable-icon.png", 
-      "sizes": "512x512",
+      "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "maskable"
     }
