@@ -88,6 +88,13 @@ export class Subject {
         return this._grades.length === 0;
     }
 
+    public copy(): Subject {
+        const copy = new Subject(this._name);
+        copy._grades = [...this._grades];
+        copy._finalGrade = this._finalGrade;
+        return copy;
+    }
+
     // Getters
     get name(): string {
         return this._name;

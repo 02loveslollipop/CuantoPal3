@@ -52,7 +52,7 @@ export class SubjectsManager {
     }
 
     public setCurrentSubject(name: string): Subject | null {
-        const subject = this._subjects.get(name);
+        const subject = this._subjects.get(name)?.copy();
         if (subject) {
             this._currentSubject.setCurrentSubject(subject);
         }
@@ -65,6 +65,10 @@ export class SubjectsManager {
 
     public getAllSubjectNames(): string[] {
         return Array.from(this._subjects.keys());
+    }
+
+    public getAllSubjects(): Subject[] {
+        return Array.from(this._subjects.values());
     }
 
     public getSubject(name: string): Subject | null {
