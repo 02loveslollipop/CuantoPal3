@@ -3,3 +3,5 @@
 
 npm run build # Build the React app
 npx cap sync # Sync the Capacitor project
+npx cap android # Build the Android app
+echo "Build complete"
