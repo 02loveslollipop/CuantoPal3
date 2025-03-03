@@ -1,0 +1,6 @@
+{
+  "appId": "uk.app02loveslollipop.cuantopal3",
+  "appName": "cuantopal3",
+  "webDir": "./dist",
+  "bundledWebRuntime": false
+}
