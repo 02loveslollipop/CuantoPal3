@@ -11,4 +11,6 @@ npx cap sync android # Sync the Capacitor android project
 echo "Building the Capacitor ios project"
 cd ../capacitor-ios # Change to the Capacitor ios project directory
 npx cap sync ios # Sync the Capacitor ios project
-echo "Build complete"
+echo "✨ Done! You can now build for Android and iOS separately."
+echo "📱 For Android, navigate to capacitor-android and run: npx cap sync android && npx cap open android"
+echo "🍏 For iOS, navigate to capacitor-ios and run: npx cap sync ios && npx cap open ios"
