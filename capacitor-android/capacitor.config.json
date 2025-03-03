@@ -7,9 +7,5 @@
   },
   "android": {
     "allowMixedContent": true
-  },
-  "ios": {
-    "contentInset": "automatic",
-    "limitsNavigationsToAppBoundDomains": true
   }
 }
