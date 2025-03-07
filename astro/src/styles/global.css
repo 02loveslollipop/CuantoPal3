@@ -718,6 +718,7 @@ body {
 .footer {
   width: 100vw;
   height: 400px;
+  min-height: fit-content;
   position: absolute;
   bottom: 0;
   left: 0;  
@@ -912,5 +913,84 @@ body {
     border-bottom: 1px solid var(--ios-border);
     padding-bottom: 1rem;
     margin-bottom: 1rem;
+  }
+}
+
+/* Documentation Mobile Styles */
+@media (max-width: 768px) {
+  .docs-container {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    margin-top: 60px;
+  }
+
+  .docs-sidebar {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: var(--ios-element-background);
+    padding: 1rem;
+    height: auto;
+    border-bottom: 1px solid var(--ios-border);
+    z-index: 90;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .docs-sidebar.active {
+    transform: translateY(0);
+  }
+
+  .docs-content {
+    padding: 1rem 0;
+    margin-top: 60px;
+  }
+
+  .docs-mobile-menu {
+    display: block;
+    position: fixed;
+    top: 70px;
+    right: 1rem;
+    z-index: 91;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .markdown-content {
+    padding: 0 1rem;
+  }
+
+  .markdown-content h1 {
+    font-size: 2rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  .markdown-content h2 {
+    font-size: 1.5rem;
+    margin: 1.5rem 0 1rem;
+  }
+
+  .markdown-content pre {
+    margin: 1rem -1rem;
+    border-radius: 0;
+    padding: 1rem;
+  }
+
+  .markdown-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .markdown-content img {
+    margin: 1rem -1rem;
+    max-width: calc(100% + 2rem);
+    border-radius: 0;
   }
 }
