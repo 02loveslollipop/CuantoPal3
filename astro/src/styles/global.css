@@ -1,64 +1,87 @@
 :root {
-    --color-primary: #003170;
-    --color-dark: #001F47;
-    --color-secondary: #004094;
-    --color-accent: #0066EB;
-    --color-light: #0054C2;
-  }
+  --color-primary: #003170;
+  --color-dark: #001F47;
+  --color-secondary: #004094;
+  --color-accent: #0066EB;
+  --color-light: #0054C2;
+  --ios-blue: #007AFF;
+  --ios-text-primary: #000;
+  --ios-text-secondary: #666;
+  --ios-background: #f2f2f7;
+  --ios-element-background: #ffffff;
+  --ios-border: #c8c7cc;
+}
   
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--ios-background);
+  color: var(--ios-text-primary);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  line-height: 1.5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
   
-  body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    background: white;
-    color: var(--color-dark);
-    min-height: 100vh;
-    position: relative;
-    overflow-x: hidden;
-  }
+.background-lines {
+  position: fixed;
+  width: 100%;
+  height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease-out;
+}
   
-  .background-lines {
-    position: fixed;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-  }
-  
-  .line {
-    position: absolute;
-    width: 100%;
-    height: 2px;
-    transform: rotate(-45deg);
-  }
-  
-  .line-1 { 
-    background: var(--color-primary);
-    top: 10%;
-  }
-  
-  .line-2 {
-    background: var(--color-dark);
-    top: 30%;
-  }
-  
-  .line-3 {
-    background: var(--color-secondary);
-    top: 50%;
-  }
-  
-  .line-4 {
-    background: var(--color-accent);
-    top: 70%;
-  }
-  
-  .line-5 {
-    background: var(--color-light);
-    top: 90%;
-  }
+.line {
+  position: absolute;
+  width: 150%;
+  height: 2px;
+  transform: rotate(-45deg);
+  left: -25%;
+  transition: transform 0.1s linear;
+}
+
+.line-1 { 
+  background: var(--color-primary);
+  top: 10%;
+  will-change: transform;
+}
+
+.line-2 {
+  background: var(--color-dark);
+  top: 30%;
+  will-change: transform;
+}
+
+.line-3 {
+  background: var(--color-secondary);
+  top: 50%;
+  will-change: transform;
+}
+
+.line-4 {
+  background: var(--color-accent);
+  top: 70%;
+  will-change: transform;
+}
+
+.line-5 {
+  background: var(--color-light);
+  top: 90%;
+  will-change: transform;
+}
   
   main {
     max-width: 1200px;
@@ -83,15 +106,21 @@
   
   h1 {
     font-size: 2rem;
+    font-weight: 600;
     color: var(--color-primary);
   }
   
   .hero {
+    position: relative;
+    min-height: calc(100vh - 100px);
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 4rem;
     align-items: center;
+    padding-bottom: 2rem;
+    overflow: hidden; /* Add this */
   }
+
   
   .hero-content {
     max-width: 600px;
@@ -99,15 +128,27 @@
   
   h2 {
     font-size: 3rem;
+    font-weight: 600;
     margin-bottom: 1rem;
     color: var(--color-primary);
   }
   
   h3 {
     font-size: 1.5rem;
+    font-weight: 600;
     margin-bottom: 1.5rem;
     color: var(--color-secondary);
   }
+  
+  .description {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: var(--color-dark);
+    background: var(--ios-background);
+    padding: 12px;
+    border-radius: 12px;
+
+  } 
   
   p {
     font-size: 1.1rem;
@@ -165,8 +206,9 @@
   }
   
   .phone-image {
+    margin-left: 100px;
     width: 100%;
-    max-width: 300px;
+    max-width: 400px;
     animation: float 3s ease-in-out infinite;
   }
   
@@ -219,3 +261,172 @@
       justify-content: center;
     }
   }
+
+  /* ...existing code... */
+
+.benefits {
+  padding: 6rem 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+}
+
+.benefits-image {
+  text-align: center;
+}
+
+.benefits-image img {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 49, 112, 0.1);
+}
+
+.benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.benefit-icon {
+  background: var(--ios-background);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.benefit-icon svg {
+  width: 36px;
+  height: 36px;
+  color: var(--color-accent);
+}
+
+.benefit-content h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--ios-text-primary);
+}
+
+.benefit-content p {
+  font-size: 1rem;
+  margin-bottom: 0;
+  color: var(--ios-text-secondary);
+}
+
+
+
+@media (max-width: 768px) {
+  .benefits {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 3rem;
+  }
+
+  .benefit-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+}
+
+
+@media (max-width: 800px) {
+  body {
+    background: var(--ios-element-background);
+    max-width: 100vw;
+    overflow-x: hidden;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  header {
+    padding: 1rem;
+    width: 100%;
+    background: var(--ios-element-background);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .hero {
+    min-height: calc(100vh - 80px);
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 2rem;
+    padding: 1rem;
+    position: relative; /* Ensure this is maintained */
+  }
+
+  .background-lines {
+    display: none; /* Hide background lines on mobile */
+  }
+
+  .hero-wrapper {
+    height: auto; /* Allow height to adjust based on content */
+  } 
+
+  .hero-content {
+    order: 1;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-image {
+    order: 0;
+  }
+
+  .phone-image {
+    margin-left: 0;
+    max-width: 300px;
+    margin-left: -50px;
+  }
+
+  h2 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  p {
+    text-align: center;
+    font-size: 1rem;
+    max-width: 90%;
+    margin: 0 auto 2rem auto;
+  }
+
+  .cta-buttons {
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

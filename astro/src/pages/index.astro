@@ -14,13 +14,14 @@ import { Icon } from 'astro-icon/components';
 
   </head>
   <body>
+    
     <div class="background-lines">
-      <div class="line line-1"></div>
-      <div class="line line-2"></div>
-      <div class="line line-3"></div>
-      <div class="line line-4"></div>
-      <div class="line line-5"></div>
-    </div>
+        <div class="line line-1"></div>
+        <div class="line line-2"></div>
+        <div class="line line-3"></div>
+        <div class="line line-4"></div>
+        <div class="line line-5"></div>
+</div>
 
     <main>
       <header>
@@ -30,11 +31,15 @@ import { Icon } from 'astro-icon/components';
         </div>
       </header>
 
+      
+        
+        
+
       <section class="hero">
         <div class="hero-content">
           <h2>Conoce cuanto necesitas para aprobar tu curso!</h2>
           <h3>Aprueba tus cursos sin sorpresas</h3>
-          <p>
+          <p class ="description">
             Cuanto pal 3 te permite calcular la nota exacta que necesitas en tu próximo examen 
             para aprobar el curso. Sin complicaciones, rápido y sin internet.
           </p>
@@ -70,14 +75,95 @@ import { Icon } from 'astro-icon/components';
           <img src="/phone.png" alt="App Cuanto pal 3 en smartphone" class="phone-image" />
         </div>
       </section>
+      <section class="benefits">
+        <div class="benefits-image">
+          <img src="/phone2.png" alt="Interfaz de Cuanto pal 3" />
+        </div>
+        <div class="benefits-list">
+          <div class="benefit-item">
+            <div class="benefit-icon">
+              <Icon name="star" class="benefit-icon-img"/>
+            </div>
+            <div class="benefit-content">
+              <h4>Fácil de usar</h4>
+              <p>Interfaz intuitiva y simple que te permite calcular tus notas en segundos.</p>
+            </div>
+          </div>
+  
+          <div class="benefit-item">
+            <div class="benefit-icon">
+              <Icon name="wifi-off" class="benefit-icon-img"/>
+            </div>
+            <div class="benefit-content">
+              <h4>Sin internet</h4>
+              <p>Funciona completamente sin conexión. Calcula tus notas en cualquier momento y lugar.</p>
+            </div>
+          </div>
+  
+          <div class="benefit-item">
+            <div class="benefit-icon">
+              <Icon name="save" class="benefit-icon-img" />
+            </div>
+            <div class="benefit-content">
+              <h4>Guarda tus notas</h4>
+              <p>Mantén un registro de tus calificaciones y revísalas cuando lo necesites.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <script>
-      // Simple PWA install functionality (placeholder)
-      document.getElementById('pwa-install')?.addEventListener('click', () => {
-        alert('Función de instalación de PWA activada');
-        // Implementar lógica real de instalación PWA aquí
-      });
+        // Simple PWA install functionality (placeholder)
+        document.getElementById('pwa-install')?.addEventListener('click', () => {
+            alert('Función de instalación de PWA activada');
+        });
+    
     </script>
+    <script>
+        const lines = document.querySelectorAll<HTMLElement>('.line');
+        const backgroundLines = document.querySelector<HTMLElement>('.background-lines');
+        const benefitsSection = document.querySelector<HTMLElement>('.benefits');
+      
+        let ticking = false;
+        let benefitsTop = benefitsSection ? benefitsSection.getBoundingClientRect().top + window.scrollY : 0;
+      
+        window.addEventListener('resize', () => {
+          benefitsTop = benefitsSection ? benefitsSection.getBoundingClientRect().top + window.scrollY : 0;
+        });
+      
+        window.addEventListener('scroll', () => {
+          if (!ticking) {
+            window.requestAnimationFrame(() => {
+              const scrolled = window.scrollY;
+              const viewportHeight = window.innerHeight;
+      
+              if (backgroundLines) {
+                const opacity = Math.max(0, 1 - (scrolled / (benefitsTop - viewportHeight * 0.5)));
+                backgroundLines.style.opacity = opacity.toString();
+              }
+      
+              // Updated parallax effect for diagonal movement
+              lines.forEach((line) => {
+                if (line instanceof HTMLElement) {
+                  const index = Array.from(lines).indexOf(line);
+                  const speed = (index + 1) * 0.15;
+                  const direction = index % 2 === 0 ? 1 : -1;
+                  const movement = scrolled * speed * direction;
+                  // Move along the -45 degree angle using transform translate
+                  const translateX = movement * Math.cos(-45 * Math.PI / 180);
+                  const translateY = movement * Math.sin(-45 * Math.PI / 180);
+                  line.style.transform = `rotate(-45deg) translate(${translateX}px, ${translateY}px)`;
+                }
+              });
+      
+              ticking = false;
+            });
+      
+            ticking = true;
+          }
+        });
+      </script>
   </body>
 </html>
