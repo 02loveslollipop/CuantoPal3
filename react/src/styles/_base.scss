@@ -54,7 +54,8 @@
     
     &__content {
       flex: 1;
-      overflow-y: auto;
+      overflow: hidden;
+      height: calc(100vh - 120px);
       -webkit-overflow-scrolling: touch;
       padding-bottom: 76px; // Extra padding for bottom navigation
     }
