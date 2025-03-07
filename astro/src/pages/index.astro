@@ -24,10 +24,36 @@ import { Icon } from 'astro-icon/components';
 </div>
 
     <main>
-      <header>
-        <div class="logo-container">
-          <img src="/logo.svg" alt="Cuanto pal 3 Logo" class="logo" />
-          <h1>Cuanto pal 3</h1>
+      <header class="header">
+        <div class="header-content">
+          <div class="logo-container">
+            <a href="#top" class="logo-link">
+              <img src="/logo.svg" alt="Cuanto pal 3 Logo" class="logo" />
+              <h1>Cuanto pal 3</h1>
+            </a>
+          </div>
+          
+          <nav class="main-nav">
+            <ul class="nav-list">
+              <li><a href="#beneficios">Beneficios</a></li>
+              <li><a href="#testimonios">Testimonios</a></li>
+              <li class="dropdown">
+                <button class="dropdown-trigger">
+                  Documentación
+                  <Icon name="chevron-down" class="icon-small" />
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a href="/docs/getting-started">Uso</a></li>
+                  <li><a href="/docs/installation">Instalacion iOS</a></li>
+                  <li><a href="/docs/usage">Otros</a></li>
+                </ul>
+              </li>
+            </ul>
+          </nav>
+      
+          <a href="https://github.com/02loveslollipop/CuantoPal3" class="github-link" target="_blank" rel="noopener">
+            <Icon name="github" />
+          </a>
         </div>
       </header>
 
@@ -75,7 +101,7 @@ import { Icon } from 'astro-icon/components';
           <img src="/phone.png" alt="App Cuanto pal 3 en smartphone" class="phone-image" />
         </div>
       </section>
-      <section class="benefits">
+      <section class="benefits" id="beneficios">
         <div class="benefits-image">
           <img src="/phone2.png" alt="Interfaz de Cuanto pal 3" />
         </div>
@@ -111,7 +137,7 @@ import { Icon } from 'astro-icon/components';
           </div>
         </div>
       </section>
-      <section class="testimonials">
+      <section class="testimonials" id="testimonios">
         <div class="testimonials-container">
           <h2>Lo que dicen nuestros usuarios</h2>
           <div class="testimonials-grid">
@@ -174,7 +200,7 @@ import { Icon } from 'astro-icon/components';
             </ul>
           </div>
           <div class="footer-social">
-            <h3>Síguenos</h3>
+            <!-- <h3>Síguenos</h3>
             <ul>
               <li>
                 <a href="https://twitter.com/cuantopal3" target="_blank" rel="noopener">
@@ -186,7 +212,7 @@ import { Icon } from 'astro-icon/components';
                   Instagram
                 </a>
               </li>
-            </ul>
+            </ul> -->
           </div>
         </div>
         <div class="footer-bottom">
@@ -244,6 +270,35 @@ import { Icon } from 'astro-icon/components';
       
             ticking = true;
           }
+        });
+      </script>
+      <script>
+        // Smooth scroll for navigation links and back to top
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+          anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const href = this.getAttribute('href');
+            
+            if (href === '#top') {
+              window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+              });
+              return;
+            }
+      
+            const target = document.querySelector(href);
+            if (target) {
+              const headerOffset = 80;
+              const elementPosition = target.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.scrollY - headerOffset;
+      
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+              });
+            }
+          });
         });
       </script>
   </body>
