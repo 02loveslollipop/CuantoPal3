@@ -5,7 +5,7 @@ import icon from 'astro-icon';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://cuantopal3web.02loveslollipop.uk',
+  site: 'https://cuantopal3-web.vercel.app/',
   compressHTML: true,
   integrations: [icon()],
   server : {
