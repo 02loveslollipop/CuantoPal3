@@ -473,12 +473,84 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--color-accent);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--color-accent);
   color: white;
   font-weight: 600;
+}
+
+.testimonial-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.testimonial-avatar:not(:has(img)) {
+  /* Styles for avatars without images (fallback to initials) */
+  background: var(--color-accent);
+  color: white;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+}
+
+.testimonial-card {
+  background: var(--ios-element-background);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.testimonial-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.testimonial-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.testimonial-info {
+  flex: 1;
+}
+
+.testimonial-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ios-text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.testimonial-info span {
+  font-size: 0.9rem;
+  color: var(--ios-text-secondary);
+  display: block;
+}
+
+.testimonial-content {
+  color: var(--ios-text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .testimonial-card {
+    padding: 1.5rem;
+  }
+  
+  .testimonial-avatar {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .testimonial-info h4 {
