@@ -44,7 +44,7 @@ body {
   transition: opacity 0.3s ease-out;
 }
   
-.line {
+.lineM {
   position: absolute;
   width: 150%;
   height: 2px;
@@ -887,7 +887,6 @@ body {
 }
 
 .docs-content code {
-  background: var(--ios-background);
   padding: 0.2em 0.4em;
   border-radius: 4px;
   font-size: 0.9em;

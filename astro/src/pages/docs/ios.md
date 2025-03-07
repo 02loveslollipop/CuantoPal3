@@ -35,7 +35,8 @@ Si deseas correr Cuanto pal 3 en tu dispositivo iOS de forma nativa, puedes comp
    ```
 
 2. Ejecuta el script the build para instalar las dependencias y compilar la aplicacion:
-    ```
+
+    ```bash
     cd CuantoPal3
     ./build.sh
     ```

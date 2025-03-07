@@ -12,5 +12,10 @@ export default defineConfig({
 	port: 5173,
 	host: true,
 	open: true,
-  },	
+  },
+  markdown: {
+    shikiConfig: {
+      theme: 'github-dark-dimmed',
+    },
+  }
 });
