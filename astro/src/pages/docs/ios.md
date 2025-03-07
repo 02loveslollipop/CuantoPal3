@@ -38,7 +38,7 @@ Si deseas correr Cuanto pal 3 en tu dispositivo iOS de forma nativa, puedes comp
 
     ```bash
     cd CuantoPal3
-    ./build.sh
+    ./init.sh
     ```
 
 3. Abre el proyecto en Xcode:
