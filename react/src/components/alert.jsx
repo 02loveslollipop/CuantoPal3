@@ -1,5 +1,8 @@
 import React from 'react';
 
+/*Componente Alert
+Muestra una alerta modal con título, mensaje y botones de acción.*/
+
 export const Alert = ({
   isVisible,
   title,
@@ -10,6 +13,7 @@ export const Alert = ({
   isDestructive = false,
   showCancel = true
 }) => {
+  // Si la alerta no es visible, no se renderiza nada.
   if (!isVisible) return null;
 
   return (
