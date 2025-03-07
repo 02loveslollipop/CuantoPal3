@@ -1,0 +1,51 @@
+---
+import '../styles/global.css';
+import { Icon } from 'astro-icon/components';
+
+const { frontmatter } = Astro.props;
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{frontmatter.title} - Cuanto pal 3</title>
+    <meta name="description" content={frontmatter.description} />
+  </head>
+  <body>
+    <header class="header">
+        <div class="header-content">
+          <div class="logo-container">
+            <a href="/" class="logo-link">
+              <img src="/logo.svg" alt="Cuanto pal 3 Logo" class="logo" />
+              <h1>Cuanto pal 3</h1>
+            </a>
+          </div>
+          
+          <nav class="main-nav">
+          </nav>
+      
+          <a href="https://github.com/02loveslollipop/CuantoPal3" class="github-link" target="_blank" rel="noopener">
+            <Icon name="github" />
+          </a>
+        </div>
+      </header>
+
+    <div class="docs-container">
+      <aside class="docs-sidebar">
+        <nav>
+          <ul>
+            <li><a href="/docs/usage">Uso</a></li>
+            <li><a href="/docs/ios">iOS</a></li>
+            <li><a href="">Uso</a></li>
+          </ul>
+        </nav>
+      </aside>
+      
+      <main class="docs-content">
+        <slot />
+      </main>
+    </div>
+  </body>
+</html>
