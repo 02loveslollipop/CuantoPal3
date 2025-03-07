@@ -2,7 +2,11 @@ import React from 'react';
 import { SettingsManager } from '../utils/settingsManager';
 import { CurrentSubject } from '../utils/CurrentSubject';
 
+/* Componente Result
+Muestra el resultado del cálculo del curso actual*/
+
 export const Result = () => {
+  // Se obtiene la instancia actual del curso.
   const currentSubject = CurrentSubject.getInstance();
   const subject = currentSubject.getCurrentSubject();
   
@@ -12,10 +16,14 @@ export const Result = () => {
   const requiredGrade = subject.requiredGrade;
   console.log("hola")
 
+  // Se obtiene la configuración para conocer el valor mínimo aceptable.
   const settingsManager = SettingsManager.getInstance();
   const minAcceptValue = settingsManager.minAcceptValue;
 
+  /* Función que determina qué contenido mostrar basado en la comparación de la nota requerida
+  con el valor mínimo.*/
   const renderContent = () => {
+    // Si la nota requerida es mayor al valor mínimo necesario, se muestra un mensaje de advertencia.
     if (requiredGrade > minAcceptValue) {
       return (
         <div className="result__container__red">
@@ -33,6 +41,7 @@ export const Result = () => {
         </div>
       );
     } else {
+      // Si la nota requerida es menor o igual al valor mínimo necesario, se muestra un mensaje de felicitación.
       return (
         <div className="result__container__green">  
             <div className="result__content">

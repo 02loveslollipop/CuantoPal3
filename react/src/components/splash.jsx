@@ -1,5 +1,7 @@
 import React from 'react';
 
+/* Componente Splash
+Muestra una pantalla de inicio o carga mientras se prepara la aplicación.*/
 
 export const Splash = () => {
   return (
