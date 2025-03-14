@@ -1,12 +1,14 @@
 import React from 'react';
-import splashIcon from '../assets/icon.svg';
+
+/* Componente Splash
+Muestra una pantalla de inicio o carga mientras se prepara la aplicación.*/
 
 export const Splash = () => {
   return (
     <div className="splash">
       <div className="splash__content">
         <img 
-          src={splashIcon} 
+          src="icon.svg"
           alt="App Icon"
           className="splash__icon"
         />

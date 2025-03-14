@@ -1,10 +1,14 @@
 import React from 'react';
 
+/* Componente BottomNavigation
+Renderiza una barra de navegación inferior con varios ítems.*/
+
 export const BottomNavigation = ({
   items,
   activeIndex
 }) => (
   <nav className="bottom-nav">
+    {/* Se itera sobre los ítems y se renderiza un botón para cada uno */}
     {items.map((item, index) => (
       <button
         key={item.label}
