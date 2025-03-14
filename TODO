@@ -1,3 +1,0 @@
-- Show alert if press "calcular" without input
-- Show alert if press "calcular" with invalid input (Out of ranges set by the user)
-- Show alert if press "calcular" with a percentage greater than 100
