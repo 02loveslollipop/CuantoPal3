@@ -5,21 +5,36 @@ description: This workflow tests the react app with selenium using python to run
 
 run-name: "${{ github.actor }}-${{ github.run_id }}-${{ github.event_name }}-react-app-test-selenium-ci"
 
-concurrency:
-  group: default #limit concurrency to one job at a time (priority to the latest job)
+# concurrency:
+#   group: default #limit concurrency to one job at a time (priority to the latest job)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 
 jobs:
-  
+  # sonarcloud:
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+
+  #     - name: SonarCloud Scan
+  #       uses: sonarsource/sonarcloud-github-action@master
+  #       with:
+  #         args: sonar-scanner -Dsonar.projectKey=your_project_key -Dsonar.organization=your_organization_name -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   selenium:
     runs-on: ubuntu-latest
