@@ -43,14 +43,16 @@ jobs:
       APP_URL: http://localhost:3000
       DISPLAY: :99
 
-    services:
-      xvfb:
-        image: xvfb-run
-        options: --entrypoint /usr/bin/Xvfb -- :99 -screen 0 1280x1024x24 -ac
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    - name: Setup Xvfb
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
+        Xvfb :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+        echo "DISPLAY=:99" >> $GITHUB_ENV
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -100,8 +102,14 @@ jobs:
 
     - name: Install Python dependencies
       run: |
+        # Check if tests directory exists, if not create it
+        mkdir -p tests
         cd tests
         python -m pip install --upgrade pip
+        # Check if requirements.txt exists, if not create one
+        if [ ! -f requirements.txt ]; then
+          echo "pytest\nselenium\nwebdriver-manager" > requirements.txt
+        fi
         pip install -r requirements.txt
 
     - name: Run Selenium tests
@@ -117,4 +125,4 @@ jobs:
       with:
         name: test-results
         path: tests/screenshots/
-        retention-days: 7
+        retention-days: 5
