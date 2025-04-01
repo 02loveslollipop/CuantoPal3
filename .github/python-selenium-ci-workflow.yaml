@@ -1,0 +1,105 @@
+#This workflow test the react app with selenium using python to run the selenium tests
+
+name: React App Test with Selenium
+description: This workflow tests the react app with selenium using python to run the selenium tests
+
+run-name: "${{ github.actor }}-${{ github.run_id }}-${{ github.event_name }}-react-app-test-selenium-ci"
+
+concurrency:
+  group: default #limit concurrency to one job at a time (priority to the latest job)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+
+jobs:
+  
+
+  selenium:
+    runs-on: ubuntu-latest
+    
+    env:
+      APP_URL: http://localhost:3000
+      DISPLAY: :99
+
+    services:
+      xvfb:
+        image: xvfb-run
+        options: --entrypoint /usr/bin/Xvfb -- :99 -screen 0 1280x1024x24 -ac
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: react/package-lock.json
+
+    - name: Install React dependencies
+      run: |
+        cd react
+        npm ci
+
+    - name: Build React app
+      run: |
+        cd react
+        npm run build
+
+    - name: Start React server
+      run: |
+        cd react
+        npm run preview -- --port 3000 &
+        # Allow time for the server to start up
+        sleep 10
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+
+    - name: Install Chrome
+      run: |
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+
+    - name: Install ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
+        wget -N https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION -O - | xargs -I{} wget -N https://chromedriver.storage.googleapis.com/{}/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        chmod +x chromedriver
+        sudo mv chromedriver /usr/local/bin/
+        chromedriver --version
+
+    - name: Install Python dependencies
+      run: |
+        cd tests
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Selenium tests
+      run: |
+        cd tests
+        pytest -v test_home_page.py
+      env:
+        APP_URL: http://localhost:3000
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: tests/screenshots/
+        retention-days: 7
