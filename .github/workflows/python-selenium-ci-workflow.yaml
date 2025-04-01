@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     
     env:
-      APP_URL: http://localhost:3000
+      APP_URL: ${{ secrets.APP_URL || 'http://localhost:3000' }}
       DISPLAY: :99
 
     steps:
@@ -93,10 +93,8 @@ jobs:
         mkdir -p tests
         cd tests
         python -m pip install --upgrade pip
-        # Check if requirements.txt exists, if not create one
-        if [ ! -f requirements.txt ]; then
-          echo -e "pytest\nselenium\nwebdriver-manager" > requirements.txt
-        fi
+        # Create requirements.txt with necessary packages
+        echo -e "pytest\nselenium\nwebdriver-manager\npytest-html" > requirements.txt
         pip install -r requirements.txt
 
     - name: Run Selenium tests
@@ -105,9 +103,10 @@ jobs:
         mkdir -p tests/screenshots
         
         cd tests
-        python -m pytest -v test_home_page.py
+        # Add HTML report generation
+        python -m pytest -v test_home_page.py --html=report.html
       env:
-        APP_URL: http://localhost:3000
+        APP_URL: ${{ secrets.APP_URL || 'http://localhost:3000' }}
         PYTHONPATH: ${{ github.workspace }}
 
     - name: Upload test results
@@ -115,5 +114,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-results
-        path: tests/screenshots/
+        path: |
+          tests/screenshots/
+          tests/report.html
         retention-days: 5
