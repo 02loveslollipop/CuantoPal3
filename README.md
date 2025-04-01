@@ -14,7 +14,7 @@
   <p><em>A web/mobile application that allows you to calculate the grade you need to pass a course.</em></p>
 </div>
 
-# Use it
+# 🎮 Use it
 - Google Play Store: [Cuanto Pal 3](https://play.google.com/store/apps/details?id=com.cuantopal3)
 
 - Web: [Cuanto Pal 3](https://app.cuantopal3.02loveslollipop.uk)
