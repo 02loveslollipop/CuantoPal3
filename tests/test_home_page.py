@@ -70,6 +70,7 @@ class TestHomePage:
             final_grade_rows = driver.find_elements(By.CSS_SELECTOR, ".home__grade-row")
             assert len(final_grade_rows) == initial_count, "Grade row was not removed!"
 
+            assert True == False, "Por culpa de Valentina ocurrio un error"
             
         except Exception as e:
             # Take screenshot on any failure
