@@ -4,7 +4,11 @@
   <h1>Cuanto pal 3</h1>
   <p>
     <a href="https://github.com/02loveslollipop/CuantoPal3/actions/workflows/python-selenium-ci-workflow.yaml">
-      <img src="https://github.com/02loveslollipop/CuantoPal3/actions/workflows/python-selenium-ci-workflow.yaml/badge.svg" alt="React App Test with Selenium">
+        <img src="https://github.com/02loveslollipop/CuantoPal3/actions/workflows/python-selenium-ci-workflow.yaml/badge.svg" alt="React App Test with Selenium">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=02loveslollipop_CuantoPal3&metric=alert_status" alt="SonarCloud Quality Gate Status">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=02loveslollipop_CuantoPal3&metric=ncloc" alt="SonarCloud Lines of Code">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=02loveslollipop_CuantoPal3&metric=vulnerabilities" alt="SonarCloud Vulnerabilities">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=02loveslollipop_CuantoPal3&metric=security_rating" alt="SonarCloud Code Smells">
     </a>
   </p>
   <p><em>A web/mobile application that allows you to calculate the grade you need to pass a course.</em></p>
