@@ -45,7 +45,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Chrome and ChromeDriver
       uses: nanasess/setup-chromedriver@v2
@@ -58,7 +58,7 @@ jobs:
         echo "DISPLAY=:99" >> $GITHUB_ENV
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
@@ -82,7 +82,7 @@ jobs:
         sleep 10
       
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         cache: 'pip'
