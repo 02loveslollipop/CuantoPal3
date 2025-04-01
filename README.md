@@ -1,6 +1,6 @@
 # Cuanto pal 3
-
-![HomeCuantoPal3](./imgs/mobile_app_home.png)
+[![React App Test with Selenium](https://github.com/02loveslollipop/CuantoPal3/actions/workflows/python-selenium-ci-workflow.yaml/badge.svg)](https://github.com/02loveslollipop/CuantoPal3/actions/workflows/python-selenium-ci-workflow.yaml)
+![HomeCuantoPal3](./imgs/Mockup.png)
 
 > A web/mobile application that allows you to calculate the grade you need to pass a course.
 
