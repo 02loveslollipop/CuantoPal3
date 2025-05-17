@@ -219,8 +219,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
         
         current_item_count = self._get_grades_list_item_count()
         logger.info(f"Current grade item count after add: {current_item_count}")
-        self.assertEqual(current_item_count, initial_item_count + 1, 
-                         f"Grade item count did not increase by 1. Initial: {initial_item_count}, Current: {current_item_count}")
+        try:
+            self.assertEqual(current_item_count, initial_item_count + 1, 
+                             f"Grade item count did not increase by 1. Initial: {initial_item_count}, Current: {current_item_count}")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         logger.info(f"Test {test_name} completed successfully.")
 
 
@@ -255,8 +259,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
 
         current_item_count = self._get_grades_list_item_count()
         logger.info(f"Current grade item count after multiple adds: {current_item_count}")
-        self.assertEqual(current_item_count, initial_item_count + len(grades_data),
-                         f"Grade item count did not increase correctly. Expected: {initial_item_count + len(grades_data)}, Got: {current_item_count}")
+        try:
+            self.assertEqual(current_item_count, initial_item_count + len(grades_data),
+                             f"Grade item count did not increase correctly. Expected: {initial_item_count + len(grades_data)}, Got: {current_item_count}")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         logger.info(f"Test {test_name} completed successfully.")
 
     def test_us01_validate_grade_input_below_range(self, request=None):
@@ -269,8 +277,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
         
         # Assuming invalid input does not add a grade item
         current_item_count = self._get_grades_list_item_count()
-        self.assertEqual(current_item_count, initial_item_count, 
-                         "Grade item count should not change for invalid grade input below range.")
+        try:
+            self.assertEqual(current_item_count, initial_item_count, 
+                             "Grade item count should not change for invalid grade input below range.")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         # Add assertion for error message if visible
         logger.info(f"Test {test_name} completed.")
 
@@ -283,8 +295,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
         self._add_grade_and_percentage("8.0", "20") # Invalid grade (above max 7)
         
         current_item_count = self._get_grades_list_item_count()
-        self.assertEqual(current_item_count, initial_item_count, 
-                         "Grade item count should not change for invalid grade input above range.")
+        try:
+            self.assertEqual(current_item_count, initial_item_count, 
+                             "Grade item count should not change for invalid grade input above range.")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         # Add assertion for error message
         logger.info(f"Test {test_name} completed.")
 
@@ -297,8 +313,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
         self._add_grade_and_percentage("4.0", "-10") # Invalid percentage
         
         current_item_count = self._get_grades_list_item_count()
-        self.assertEqual(current_item_count, initial_item_count, 
-                         "Grade item count should not change for negative percentage input.")
+        try:
+            self.assertEqual(current_item_count, initial_item_count, 
+                             "Grade item count should not change for negative percentage input.")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         # Add assertion for error message
         logger.info(f"Test {test_name} completed.")
 
@@ -311,8 +331,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
         self._add_grade_and_percentage("4.0", "abc") # Non-numeric percentage
         
         current_item_count = self._get_grades_list_item_count()
-        self.assertEqual(current_item_count, initial_item_count, 
-                         "Grade item count should not change for non-numeric percentage input.")
+        try:
+            self.assertEqual(current_item_count, initial_item_count, 
+                             "Grade item count should not change for non-numeric percentage input.")
+        except AssertionError as e:
+            self._take_screenshot(f"{test_name}_assertion_failed")
+            raise e
         # Add assertion for error message
         logger.info(f"Test {test_name} completed.")
 
