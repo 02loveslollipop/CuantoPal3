@@ -181,9 +181,9 @@ class US04Tests(unittest.TestCase):
     def _get_current_weighted_average(self):
         raw_text = ""
         try:
-            # Ensure we are on the result page
-            self.wait_long.until(EC.url_contains("/result"))
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            # The calling test method now ensures that we are on the result page
+            # and the main result container is present.
+            # This function will now directly wait for the specific average element to be visible.
             
             average_element = self.wait_long.until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
@@ -251,12 +251,13 @@ class US04Tests(unittest.TestCase):
             logger.info(f"Before clicking 'Calcular'. Current URL: {self.driver.current_url}")
             calculate_button.click()
             logger.info(f"Immediately after attempting to click 'Calcular'. Current URL: {self.driver.current_url}")
-            self._take_screenshot("after_calculate_click_attempt") # Screenshot right after click
-            time.sleep(1) # Small pause to allow DOM changes/navigation to initiate
+            self._take_screenshot("after_calculate_click_attempt_1") 
+            time.sleep(1) 
             
-            logger.info(f"After 1s delay. Current URL: {self.driver.current_url}. Now waiting for URL to contain '/result'...")
-            self.wait_long.until(EC.url_contains("/result")) # This is where the timeout occurs
-            logger.info(f"Successfully navigated to {self.driver.current_url}. Checking for result container.")
+            logger.info(f"After 1s delay. Current URL: {self.driver.current_url}. Now waiting for result page container '{self.RESULT_PAGE_CONTAINER_SELECTOR}'...")
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            logger.info(f"Result page container '{self.RESULT_PAGE_CONTAINER_SELECTOR}' is present. Current URL: {self.driver.current_url}. Verifying URL and then getting average.")
+            self.assertIn("/result", self.driver.current_url, "URL should contain /result after result container is present for 1st calculation")
 
             current_avg_1 = self._get_current_weighted_average()
             expected_avg_1 = 0.9 # (4.5 * 20) / 100 = 90 / 100 = 0.9
@@ -275,9 +276,12 @@ class US04Tests(unittest.TestCase):
 
             calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR))) # Re-locate button
             calculate_button.click()
-            logger.info("Clicked 'Calcular' button again.")
-            self.wait_long.until(EC.url_contains("/result"))
-            logger.info(f"Navigated to {self.driver.current_url}")
+            logger.info("Clicked 'Calcular' button again for 2nd calculation.")
+            self._take_screenshot("after_calculate_click_attempt_2")
+            time.sleep(1)
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            logger.info(f"Result page container '{self.RESULT_PAGE_CONTAINER_SELECTOR}' is present after 2nd calc. Current URL: {self.driver.current_url}. Verifying URL.")
+            self.assertIn("/result", self.driver.current_url, "URL should contain /result after 2nd calc and result container is present")
 
             current_avg_2 = self._get_current_weighted_average()
             expected_avg_2 = 1.8 # (4.5 * 20 + 3.0 * 30) / 100 = (90 + 90)/100 = 1.8
@@ -296,9 +300,12 @@ class US04Tests(unittest.TestCase):
 
             calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR))) # Re-locate button
             calculate_button.click()
-            logger.info("Clicked 'Calcular' button again.")
-            self.wait_long.until(EC.url_contains("/result"))
-            logger.info(f"Navigated to {self.driver.current_url}")
+            logger.info("Clicked 'Calcular' button again for 3rd calculation.")
+            self._take_screenshot("after_calculate_click_attempt_3")
+            time.sleep(1)
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            logger.info(f"Result page container '{self.RESULT_PAGE_CONTAINER_SELECTOR}' is present after 3rd calc. Current URL: {self.driver.current_url}. Verifying URL.")
+            self.assertIn("/result", self.driver.current_url, "URL should contain /result after 3rd calc and result container is present")
             
             current_avg_3 = self._get_current_weighted_average()
             # (4.5*20 + 3.0*30 + 5.0*50)/100 = (90 + 90 + 250)/100 = 430/100 = 4.3
