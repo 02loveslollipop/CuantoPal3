@@ -25,6 +25,10 @@ def driver(request):
         options=chrome_options
     )
     
+    # If the test instance has 'set_driver_fixture', call it
+    if hasattr(request.instance, "set_driver_fixture"):
+        request.instance.set_driver_fixture(driver)
+    
     # Create screenshots directory if it doesn't exist
     os.makedirs("screenshots", exist_ok=True)
     

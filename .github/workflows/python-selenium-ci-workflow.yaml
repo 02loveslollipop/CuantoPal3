@@ -112,7 +112,7 @@ jobs:
         
         cd tests
         # Add HTML report generation
-        python -m pytest -v test_home_page.py --html=report.html
+        python -m pytest -v --html=report.html
       env:
         APP_URL: 'http://localhost:3000'
         PYTHONPATH: ${{ github.workspace }}
