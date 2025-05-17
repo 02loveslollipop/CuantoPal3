@@ -88,7 +88,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
             logger.info("Initial alert/overlay button not found or not clickable within timeout, proceeding.")
         except Exception as e:
             logger.warning(f"An unexpected error occurred while trying to handle initial alert: {e}")
-            # self._take_screenshot("error_initial_alert_handling") # Optional: screenshot if alert handling fails unexpectedly
+            self._take_screenshot("error_initial_alert_handling") # Optional: screenshot if alert handling fails unexpectedly
 
         try:
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
@@ -213,7 +213,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_grade_input_below_range(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        # self._initial_setup() # Already called by self.setUp()
+        self._initial_setup() # Already called by self.setUp()
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("-1.0", "20") # Invalid grade (below min 0)
@@ -228,7 +228,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_grade_input_above_range(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        # self._initial_setup()
+        self._initial_setup()
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("8.0", "20") # Invalid grade (above max 7)
@@ -242,7 +242,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_percentage_input_negative(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        # self._initial_setup()
+        self._initial_setup()
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("4.0", "-10") # Invalid percentage
@@ -256,7 +256,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_percentage_input_non_numeric(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        # self._initial_setup()
+        self._initial_setup()
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("4.0", "abc") # Non-numeric percentage
