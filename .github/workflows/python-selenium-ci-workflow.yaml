@@ -111,8 +111,8 @@ jobs:
         mkdir -p tests/screenshots
         
         cd tests
-        # Add HTML report generation
-        python -m pytest -v --html=report.html
+        # Explicitly call us1.py and us2.py, add HTML report generation
+        python -m pytest -v --html=report.html us1.py us2.py
       env:
         APP_URL: 'http://localhost:3000'
         PYTHONPATH: ${{ github.workspace }}
