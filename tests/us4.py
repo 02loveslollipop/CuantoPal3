@@ -3,6 +3,7 @@ import unittest
 import time
 import os
 import logging
+import re # Added for parsing
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -19,8 +20,9 @@ class US04Tests(unittest.TestCase):
     ADD_GRADE_BUTTON_SELECTOR = "button.home__add-button"
     GRADES_LIST_ITEM_SELECTOR = "div.home__grades-container > div.home__grade-row"
     CALCULATE_BUTTON_SELECTOR = "button.home__calculate-button"
-    # Hypothetical selector based on selenium-test-dev.md. May need verification.
-    CURRENT_AVERAGE_DISPLAY_SELECTOR = "#current-average-display" 
+    # Updated selector for the result page based on result.jsx
+    CURRENT_AVERAGE_DISPLAY_SELECTOR = "p.result__card-current"
+    RESULT_PAGE_CONTAINER_SELECTOR = "div.result" # A general selector for the result page
     
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
@@ -123,6 +125,16 @@ class US04Tests(unittest.TestCase):
             self.fail("Driver not available.")
             return
 
+        # Ensure we are on the home page before adding grades
+        if "/result" in self.driver.current_url:
+            logger.info("Currently on result page, navigating back to home to add grades.")
+            nav_back_button = self.wait_long.until(
+                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+            )
+            nav_back_button.click()
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            logger.info("Navigated back to home page.")
+
         grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
         if not grade_rows: # Should not happen if app starts with one row
             logger.error("No grade rows found to add grade and percentage.")
@@ -169,10 +181,13 @@ class US04Tests(unittest.TestCase):
     def _get_current_weighted_average(self):
         raw_text = ""
         try:
+            # Ensure we are on the result page
+            self.wait_long.until(EC.url_contains("/result"))
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            
             average_element = self.wait_long.until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
             )
-            # Add a small delay or check for text to be non-empty if necessary
             time.sleep(0.2) # give a brief moment for text to update
             
             raw_text = average_element.text.strip()
@@ -182,35 +197,36 @@ class US04Tests(unittest.TestCase):
                 raw_text = average_element.text.strip()
                 attempts += 1
             
-            logger.info(f"Raw current weighted average text: '{raw_text}'")
+            logger.info(f"Raw current weighted average text from result page: '{raw_text}'")
             if not raw_text:
-                logger.warning("Current weighted average text is empty after retries.")
-                self._take_screenshot("empty_current_average")
+                logger.warning("Current weighted average text is empty after retries on result page.")
+                self._take_screenshot("empty_current_average_result_page")
                 return "Error: Empty Value"
 
-            # Assuming the text is just a number, possibly with a suffix like "/ 5.0" or similar.
-            # For now, let's assume it's a direct float value.
-            # If it has " / X.X", we might need to parse it.
-            # Example: "3.4 / 5.0" -> we need 3.4
-            # For now, try direct conversion. If it fails, the app might display it differently.
-            # The Subject.ts finalGrade is Number((weightedSum / 100).toFixed(1))
-            # So it should be a direct number like "1.7".
-            
-            # If the text might contain other characters like "Promedio: 1.7", parse accordingly.
-            # For now, assuming it's just the number.
-            return float(raw_text)
+            # Parse the text: "Actualmente tienes un promedio de {finalGrade} en el {totalPercentage}% de la materia."
+            match = re.search(r"Actualmente tienes un promedio de (\\d+\\.\\d+|\\d+) en el", raw_text)
+            if match:
+                grade_str = match.group(1)
+                logger.info(f"Extracted grade string: '{grade_str}'")
+                return float(grade_str)
+            else:
+                logger.error(f"Could not parse final grade from text: '{raw_text}'")
+                self._take_screenshot("current_average_parse_error_result")
+                return "Error: Parse"
         except TimeoutException:
-            logger.error(f"Timeout waiting for current weighted average display element: {self.CURRENT_AVERAGE_DISPLAY_SELECTOR}")
-            logger.info(f"Page source at timeout:\\n{self.driver.page_source[:2000]}") # Log part of page source
-            self._take_screenshot("current_average_timeout")
+            logger.error(f"Timeout waiting for result page elements or current weighted average display: {self.CURRENT_AVERAGE_DISPLAY_SELECTOR}")
+            logger.info(f"Current URL: {self.driver.current_url}")
+            logger.info(f"Page source at timeout:\\n{self.driver.page_source[:2000]}")
+            self._take_screenshot("current_average_timeout_result_page")
             return "Error: Timeout"
         except ValueError:
-            logger.error(f"Could not convert current weighted average text '{raw_text}' to float.")
-            self._take_screenshot("current_average_value_error")
+            # This might happen if grade_str is not a valid float, though regex should prevent it.
+            logger.error(f"Could not convert extracted grade string to float from '{raw_text}'.")
+            self._take_screenshot("current_average_value_error_result")
             return "Error: Conversion"
         except Exception as e:
-            logger.error(f"Error getting current weighted average: {e}")
-            self._take_screenshot("get_current_average_error")
+            logger.error(f"Error getting current weighted average from result page: {e}")
+            self._take_screenshot("get_current_average_error_result")
             return "Error: General"
 
     # US04: Cálculo del Promedio Ponderado Actual
@@ -219,53 +235,74 @@ class US04Tests(unittest.TestCase):
         logger.info(f"Running test: {test_name}")
 
         try:
-            # Click "Calcular" to see initial state if any (likely 0 or not shown)
-            # For this test, we add grades first, then calculate and check.
+            # Ensure we start on the home page for adding grades
+            if "/result" in self.driver.current_url:
+                self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            elif self.HOME_CONTAINER_SELECTOR not in self.driver.page_source:
+                 self.driver.get(self.BASE_URL)
+                 self._initial_setup() # Re-run setup if not on home page and not on result page
 
             # 1. Add first grade and verify average
             logger.info("Adding first grade (4.5, 20%).")
             self._add_grade_and_percentage("4.5", "20") # Adds and clicks "Agregar nota"
             
-            # Click "Calcular"
             calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
             calculate_button.click()
-            logger.info("Clicked 'Calcular' button.")
-            time.sleep(0.5) # Wait for calculation and display update
+            logger.info("Clicked 'Calcular' button. Expecting navigation to /result.")
+            
+            # Wait for navigation to result page and for the average display to be ready
+            self.wait_long.until(EC.url_contains("/result"))
+            logger.info(f"Navigated to {self.driver.current_url}")
 
             current_avg_1 = self._get_current_weighted_average()
-            expected_avg_1 = round((4.5 * 20) / 100, 1) # 0.9
+            expected_avg_1 = 0.9 # (4.5 * 20) / 100 = 90 / 100 = 0.9
             self.assertEqual(current_avg_1, expected_avg_1,
                              f"Average after 1st grade expected {expected_avg_1}, but got {current_avg_1}")
-            logger.info(f"Average after 1st grade is correct: {current_avg_1}")
+            logger.info(f"Average after 1st grade on result page is correct: {current_avg_1}")
+
+            # Navigate back to home to add more grades
+            self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            logger.info("Navigated back to home page to add second grade.")
 
             # 2. Add second grade and verify average
-            # _add_grade_and_percentage already clicked "Agregar nota", so a new row should be ready.
             logger.info("Adding second grade (3.0, 30%).")
             self._add_grade_and_percentage("3.0", "30")
 
-            calculate_button.click() # Re-click calculate
+            calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR))) # Re-locate button
+            calculate_button.click()
             logger.info("Clicked 'Calcular' button again.")
-            time.sleep(0.5)
+            self.wait_long.until(EC.url_contains("/result"))
+            logger.info(f"Navigated to {self.driver.current_url}")
 
             current_avg_2 = self._get_current_weighted_average()
-            expected_avg_2 = round((4.5 * 20 + 3.0 * 30) / 100, 1) # (90 + 90)/100 = 1.8
+            expected_avg_2 = 1.8 # (4.5 * 20 + 3.0 * 30) / 100 = (90 + 90)/100 = 1.8
             self.assertEqual(current_avg_2, expected_avg_2,
                              f"Average after 2nd grade expected {expected_avg_2}, but got {current_avg_2}")
-            logger.info(f"Average after 2nd grade is correct: {current_avg_2}")
+            logger.info(f"Average after 2nd grade on result page is correct: {current_avg_2}")
+
+            # Navigate back to home to add more grades
+            self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            logger.info("Navigated back to home page to add third grade.")
 
             # 3. Add third grade and verify average
             logger.info("Adding third grade (5.0, 50%).")
             self._add_grade_and_percentage("5.0", "50")
 
-            calculate_button.click() # Re-click calculate
+            calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR))) # Re-locate button
+            calculate_button.click()
             logger.info("Clicked 'Calcular' button again.")
-            time.sleep(0.5)
+            self.wait_long.until(EC.url_contains("/result"))
+            logger.info(f"Navigated to {self.driver.current_url}")
             
             current_avg_3 = self._get_current_weighted_average()
-            expected_avg_3 = round((4.5 * 20 + 3.0 * 30 + 5.0 * 50) / 100, 1) # (90 + 90 + 250)/100 = 430/100 = 4.3
+            # (4.5*20 + 3.0*30 + 5.0*50)/100 = (90 + 90 + 250)/100 = 430/100 = 4.3
+            expected_avg_3 = 4.3 
             self.assertEqual(current_avg_3, expected_avg_3,
                              f"Average after 3rd grade expected {expected_avg_3}, but got {current_avg_3}")
-            logger.info(f"Average after 3rd grade is correct: {current_avg_3}")
+            logger.info(f"Average after 3rd grade on result page is correct: {current_avg_3}")
 
         except AssertionError as e:
             logger.error(f"AssertionError in {test_name}: {e}")
