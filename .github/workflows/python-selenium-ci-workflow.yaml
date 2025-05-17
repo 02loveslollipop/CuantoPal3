@@ -111,8 +111,7 @@ jobs:
         mkdir -p tests/screenshots
         
         cd tests
-        # Explicitly call us1.py, us2.py and us3.py, add HTML report generation
-        python -m pytest -v --html=report.html us1.py us2.py us3.py
+        python -m pytest -v --html=report.html us1.py us2.py us3.py us4.py
       env:
         APP_URL: 'http://localhost:3000'
         PYTHONPATH: ${{ github.workspace }}
