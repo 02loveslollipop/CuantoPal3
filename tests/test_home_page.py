@@ -4,91 +4,71 @@ import os
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException # Ensure this is imported
 
-class TestHomePage:
-    def _initial_setup(self, driver):
-        base_url = os.environ.get('APP_URL', 'http://localhost:3000')
-        driver.get(base_url)
-        time.sleep(1) # Allow a brief moment for initial rendering
+# Configure logging
+import logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-        # 1. Handle initial alert (if any)
+class HomePageTest(StaticLiveServerTestCase):
+    GRADE_INPUT_SELECTOR = 'input.home__input[placeholder="0.0"][type="number"]'
+    PERCENTAGE_INPUT_SELECTOR = 'input.home__input[placeholder="0"][type="number"]'
+    ADD_GRADE_BUTTON_SELECTOR = 'button.home__add-button'
+    GRADES_LIST_ITEM_SELECTOR = "div.home__grades-container > div.home__grade-row"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # Additional setup if needed
+        cls.driver.implicitly_wait(10) # Implicit wait for elements to be present
+
+    def _initial_setup(self):
+        self.driver.get(self.live_server_url)
+        # No alert handling for now, as it's not in the provided production HTML
+        # try:
+        #     WebDriverWait(self.driver, 3).until(
+        #         EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
+        #     ).click()
+        #     logger.info("Initial alert handled.")
+        # except TimeoutException:
+        #     logger.info("Initial alert not found or not clickable, proceeding.")
+
         try:
-            alert_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
-            )
-            alert_button.click()
-            # Wait for the alert to disappear or for a subsequent element if needed
-            WebDriverWait(driver, 5).until(EC.staleness_of(alert_button))
-            print("Initial alert handled.")
+            # Wait for the main grade input to be present
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
+            logger.info(f"Grade input ('{self.GRADE_INPUT_SELECTOR}') found on page load.")
         except TimeoutException:
-            print("Initial alert not found or not clickable within 10s.")
-        except Exception as e:
-            print(f"Error clicking initial alert: {e}, proceeding.")
+            current_url = self.driver.current_url
+            logger.error(f"Failed to find grade input ('{self.GRADE_INPUT_SELECTOR}') on initial load. URL: {current_url}")
+            self._take_screenshot("error_initial_setup_grade_input_not_found")
+            # Ensure the exception message is clear
+            raise Exception(f"Could not find the grade input ('{self.GRADE_INPUT_SELECTOR}') during setup. Current URL: {current_url}")
 
-        # 2. Check if we are on the main page (with grade-input) or need to navigate back
-        try:
-            # Try to find a main page element immediately. If present, we are good.
-            WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, "grade-input")))
-            print("Already on the main page with grade input.")
-            return # Already on the correct page
-        except TimeoutException:
-            print("Grade input not immediately visible. Attempting navigation back from potential settings/initial page.")
-            try:
-                # If not on main page, try to click a common 'back' or 'home' button
-                # Using ".nav-bar__button" from the original test_home_page_functional_flow
-                back_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, ".nav-bar__button"))
-                )
-                back_button.click()
-                print("Clicked .nav-bar__button.")
-                # Wait for the main page element to ensure navigation was successful
-                WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "grade-input"))
-                )
-                print("Successfully navigated to the main page with grade-input after clicking back.")
-            except TimeoutException:
-                print("Failed to find grade-input after attempting back navigation.")
-                os.makedirs("screenshots", exist_ok=True)
-                driver.save_screenshot(f"screenshots/error_initial_setup_navigation_timeout_{int(time.time())}.png")
-                raise Exception("Could not navigate to the main page with grade-input during setup.")
-            except Exception as e_nav:
-                print(f"Error during back navigation attempt: {e_nav}")
-                os.makedirs("screenshots", exist_ok=True)
-                driver.save_screenshot(f"screenshots/error_initial_setup_navigation_exception_{int(time.time())}.png")
-                raise e_nav
-        except Exception as e_main_check:
-            print(f"Unexpected error during initial page check: {e_main_check}")
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_initial_setup_main_check_exception_{int(time.time())}.png")
-            raise e_main_check
+    def _add_grade_and_percentage(self, grade, percentage):
+        # Ensure _initial_setup has been called or page is otherwise ready
+        grade_input = self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
+        percentage_input = self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)))
+        add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
 
-    def _add_grade_and_percentage(self, driver, grade, percentage):
-        grade_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "grade-input"))
-        )
         grade_input.clear()
         grade_input.send_keys(str(grade))
-
-        percentage_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "percentage-input"))
-        )
         percentage_input.clear()
         percentage_input.send_keys(str(percentage))
-
-        add_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "add-grade-btn"))
-        )
         add_button.click()
+        logger.info(f"Added grade: {grade}, percentage: {percentage}")
 
-    def _get_grades_list_item_count(self, driver):
+    def _get_grades_list_item_count(self):
+        # This counts the number of displayed grade rows
         try:
-            grades_list_container = driver.find_element(By.ID, "grades-list")
-            # Assuming direct children are the items; adjust selector if structure is different
-            return len(grades_list_container.find_elements(By.XPATH, "./*"))
-        except Exception:
-            return 0 # If list not found or empty
+            grade_items = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
+            return len(grade_items)
+        except Exception as e:
+            logger.error(f"Error finding grade list items: {e}")
+            self._take_screenshot("error_get_grades_list_item_count")
+            return 0
 
+    # US01: Registro de Calificaciones
     def test_us01_add_single_valid_grade(self, driver, request): # Added request fixture
         test_name = request.node.name # Use request fixture to get test name
         try:
