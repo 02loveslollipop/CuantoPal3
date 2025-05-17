@@ -282,20 +282,10 @@ class US02Tests(unittest.TestCase):
         test_name = self._testMethodName
         logger.info(f"Running test: {test_name}")
 
-        # Add two grades to ensure there's something to delete and something remaining.
-        # If initial state has 1 row:
-        # After 1st add: 1 + 2 = 3 rows
-        # After 2nd add (to the 2nd row, which was previously empty): 3 + 2 = 5 rows (incorrect logic here, see below)
-        # Corrected logic for _add_grade_and_percentage: it targets the *last* row for input.
-        # If initial state has 1 row (empty):
-        # 1. _add_grade_and_percentage("3.0", "20"):
-        #    - Inputs into row 1. Row 1 becomes filled. handleChange adds row 2 (empty). Total = 2.
-        #    - Clicks "Add Grade". handleAddGrade adds row 3 (empty). Total = 3. [F, E, E]
-        # 2. _add_grade_and_percentage("4.0", "30"):
-        #    - Targets last row (row 3, index 2). Inputs into row 3. Row 3 becomes filled. handleChange adds row 4 (empty). Total = 4. [F, E, F, E]
-        #    - Clicks "Add Grade". handleAddGrade adds row 5 (empty). Total = 5. [F, E, F, E, E]
-        # This interpretation of +2 per call seems to be what was discussed.
-
+        # Add two grades.
+        # Initial: [E]
+        # After 1st add ("3.0", "20"): [F1, E, E] (3 rows total)
+        # After 2nd add ("4.0", "30") to last row (index 2): [F1, E, F2, E, E] (5 rows total)
         self._add_grade_and_percentage("3.0", "20") 
         self._add_grade_and_percentage("4.0", "30") 
         
@@ -303,19 +293,24 @@ class US02Tests(unittest.TestCase):
         logger.info(f"Item count after adding two grades for delete test: {initial_item_count_before_delete}")
 
         grade_rows_before_delete = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-        # We need at least one deletable row that contains data, and preferably more than one row to see a change.
-        # If we added two grades, we should have at least two rows with data (the first two in the list of rows).
-        if not grade_rows_before_delete or len(grade_rows_before_delete) < 2: 
-             self._take_screenshot(f"{test_name}_not_enough_rows_to_delete")
-             self.fail(f"Not enough grade rows to perform delete test. Found: {len(grade_rows_before_delete)}, Expected at least 2 data rows.")
+        
+        # We need at least 3 rows to target the second filled one at index 2.
+        # After two adds, we expect 5 rows: [F1, E, F2, E, E].
+        if len(grade_rows_before_delete) < 3: 
+             self._take_screenshot(f"{test_name}_not_enough_rows_to_target_second_filled_for_delete")
+             self.fail(f"Not enough grade rows to target the second filled entry for delete. Found: {len(grade_rows_before_delete)}, Expected at least 3.")
 
-        # We will delete the first grade entry (the one in grade_rows_before_delete[0])
-        first_row_to_delete = grade_rows_before_delete[0]
+        # Target the second filled grade entry (the one at index 2, containing "4.0", "30")
+        row_to_delete_index = 2
+        row_to_delete = grade_rows_before_delete[row_to_delete_index] 
+        logger.info(f"Attempting to delete grade from row at index {row_to_delete_index}.")
+        # logger.info(f"HTML of row to delete: {row_to_delete.get_attribute('outerHTML')}") # For debugging
+
         try:
-            delete_button = first_row_to_delete.find_element(By.CSS_SELECTOR, self.DELETE_BUTTON_IN_ROW_SELECTOR)
+            delete_button = row_to_delete.find_element(By.CSS_SELECTOR, self.DELETE_BUTTON_IN_ROW_SELECTOR)
             WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable(delete_button))
             delete_button.click()
-            logger.info("Clicked delete button for the first grade entry.")
+            logger.info(f"Clicked delete button for the grade entry at index {row_to_delete_index}.")
             
             # Deleting one row should decrease the total count by 1.
             expected_count_after_delete = initial_item_count_before_delete - 1
@@ -326,9 +321,8 @@ class US02Tests(unittest.TestCase):
                 )
             except TimeoutException:
                 current_count = self._get_grades_list_item_count()
-                self._take_screenshot(f"{test_name}_timeout_waiting_for_delete")
+                self._take_screenshot(f"{test_name}_timeout_waiting_for_delete_count_update")
                 logger.error(f"Timeout waiting for grade item count to become {expected_count_after_delete} after delete. Current count: {current_count}")
-                # Re-raise or assert here to ensure test fails if wait times out
                 self.fail(f"Timeout waiting for delete. Expected {expected_count_after_delete}, got {current_count}")
             
             current_item_count_after_delete = self._get_grades_list_item_count()
@@ -336,12 +330,13 @@ class US02Tests(unittest.TestCase):
                              f"Grade item count did not decrease by 1 after delete. Initial: {initial_item_count_before_delete}, Expected: {expected_count_after_delete}, Current: {current_item_count_after_delete}")
 
         except NoSuchElementException:
-            self._take_screenshot(f"{test_name}_delete_button_not_found")
-            logger.error(f"Delete button not found in the first grade row using selector '{self.DELETE_BUTTON_IN_ROW_SELECTOR}'.")
+            self._take_screenshot(f"{test_name}_delete_button_not_found_in_row_index_{row_to_delete_index}")
+            logger.error(f"Delete button not found in the grade row at index {row_to_delete_index} using selector '{self.DELETE_BUTTON_IN_ROW_SELECTOR}'.")
+            logger.error(f"HTML of parent row (index {row_to_delete_index}) where button was not found: {row_to_delete.get_attribute('outerHTML')}")
             raise
         except TimeoutException: # For the delete button clickability
-            self._take_screenshot(f"{test_name}_delete_button_not_clickable")
-            logger.error("Timeout waiting for delete button to be clickable.")
+            self._take_screenshot(f"{test_name}_delete_button_not_clickable_in_row_index_{row_to_delete_index}")
+            logger.error(f"Timeout waiting for delete button to be clickable in row at index {row_to_delete_index}.")
             raise
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed_delete")
