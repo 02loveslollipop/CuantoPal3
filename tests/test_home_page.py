@@ -230,7 +230,7 @@ class HomePageTest(unittest.TestCase):
         percentage_to_add = "25"
         self._add_grade_and_percentage(grade_to_add, percentage_to_add)
 
-        expected_count_after_add = initial_item_count + 1 # Changed from +2 to +1
+        expected_count_after_add = initial_item_count + 2 # Reverted: expecting +2 rows per add operation
         try:
             self.wait_long.until(
                 lambda d: self._get_grades_list_item_count() == expected_count_after_add
@@ -265,7 +265,7 @@ class HomePageTest(unittest.TestCase):
 
         for i, item in enumerate(grades_data):
             self._add_grade_and_percentage(item["grade"], item["percentage"])
-            expected_count_after_item_add = initial_item_count + (i + 1) # Changed from +2*(i+1) to +(i+1)
+            expected_count_after_item_add = initial_item_count + 2 * (i + 1) # Reverted: expecting +2 rows per add operation
             try:
                 self.wait_long.until(
                     lambda d: self._get_grades_list_item_count() == expected_count_after_item_add
@@ -276,7 +276,7 @@ class HomePageTest(unittest.TestCase):
             
             time.sleep(0.2)
 
-        expected_final_count = initial_item_count + len(grades_data) # Changed from +2*len() to +len()
+        expected_final_count = initial_item_count + 2 * len(grades_data) # Reverted: expecting +2 rows per add operation
         current_item_count = self._get_grades_list_item_count()
         logger.info(f"Current grade item count after multiple adds: {current_item_count}")
         try:
