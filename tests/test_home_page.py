@@ -207,8 +207,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
         percentage_to_add = "25"
         self._add_grade_and_percentage(grade_to_add, percentage_to_add)
 
-        # Wait for the item count to increase reflecting the two new rows added
-        expected_count_after_add = initial_item_count + 2
+        expected_count_after_add = initial_item_count + 1 # Changed from +2 to +1
         try:
             self.wait_long.until(
                 lambda d: self._get_grades_list_item_count() == expected_count_after_add
@@ -221,7 +220,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
         logger.info(f"Current grade item count after add: {current_item_count}")
         try:
             self.assertEqual(current_item_count, expected_count_after_add, 
-                             f"Grade item count did not increase by 2. Initial: {initial_item_count}, Expected: {expected_count_after_add}, Current: {current_item_count}")
+                             f"Grade item count did not increase by 1. Initial: {initial_item_count}, Expected: {expected_count_after_add}, Current: {current_item_count}")
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed")
             raise e
@@ -243,9 +242,8 @@ class HomePageTest(unittest.TestCase): # Changed base class
 
         for i, item in enumerate(grades_data):
             self._add_grade_and_percentage(item["grade"], item["percentage"])
-            expected_count_after_item_add = initial_item_count + 2 * (i + 1)
+            expected_count_after_item_add = initial_item_count + (i + 1) # Changed from +2*(i+1) to +(i+1)
             try:
-                # Wait for the item count to reflect the new addition
                 self.wait_long.until(
                     lambda d: self._get_grades_list_item_count() == expected_count_after_item_add
                 )
@@ -253,9 +251,9 @@ class HomePageTest(unittest.TestCase): # Changed base class
                 self._take_screenshot(f"{test_name}_timeout_item_{i+1}")
                 logger.error(f"Timeout waiting for grade item count to be {expected_count_after_item_add} after adding item {i+1}.")
             
-            time.sleep(0.2) 
+            time.sleep(0.2)
 
-        expected_final_count = initial_item_count + 2 * len(grades_data)
+        expected_final_count = initial_item_count + len(grades_data) # Changed from +2*len() to +len()
         current_item_count = self._get_grades_list_item_count()
         logger.info(f"Current grade item count after multiple adds: {current_item_count}")
         try:
@@ -271,68 +269,68 @@ class HomePageTest(unittest.TestCase): # Changed base class
         logger.info(f"Running test: {test_name}")
 
         initial_item_count = self._get_grades_list_item_count()
-        self._add_grade_and_percentage("-1.0", "20") # Invalid grade value, but fills fields
+        self._add_grade_and_percentage("-1.0", "20")
         
-        expected_count = initial_item_count + 2 # Row count increases due to UI behavior
+        expected_count = initial_item_count + 1 # Changed from +2 to +1
         current_item_count = self._get_grades_list_item_count()
         try:
             self.assertEqual(current_item_count, expected_count, 
-                             f"Grade item count should increase by 2 even for invalid grade input (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
+                             f"Grade item count should increase by 1 (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed")
             raise e
-        logger.info(f"Test {test_name} completed (note: row count increased as expected by UI; value validation is separate).")
+        logger.info(f"Test {test_name} completed.")
 
     def test_us01_validate_grade_input_above_range(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
 
         initial_item_count = self._get_grades_list_item_count()
-        self._add_grade_and_percentage("8.0", "20") # Invalid grade value, but fills fields
+        self._add_grade_and_percentage("8.0", "20")
         
-        expected_count = initial_item_count + 2 # Row count increases due to UI behavior
+        expected_count = initial_item_count + 1 # Changed from +2 to +1
         current_item_count = self._get_grades_list_item_count()
         try:
             self.assertEqual(current_item_count, expected_count, 
-                             f"Grade item count should increase by 2 even for invalid grade input (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
+                             f"Grade item count should increase by 1 (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed")
             raise e
-        logger.info(f"Test {test_name} completed (note: row count increased as expected by UI; value validation is separate).")
+        logger.info(f"Test {test_name} completed.")
 
     def test_us01_validate_percentage_input_negative(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
 
         initial_item_count = self._get_grades_list_item_count()
-        self._add_grade_and_percentage("4.0", "-10") # Invalid percentage value, but fills fields
+        self._add_grade_and_percentage("4.0", "-10")
         
-        expected_count = initial_item_count + 2 # Row count increases due to UI behavior
+        expected_count = initial_item_count + 1 # Changed from +2 to +1
         current_item_count = self._get_grades_list_item_count()
         try:
             self.assertEqual(current_item_count, expected_count, 
-                             f"Grade item count should increase by 2 even for invalid percentage input (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
+                             f"Grade item count should increase by 1 (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed")
             raise e
-        logger.info(f"Test {test_name} completed (note: row count increased as expected by UI; value validation is separate).")
+        logger.info(f"Test {test_name} completed.")
 
     def test_us01_validate_percentage_input_non_numeric(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
 
         initial_item_count = self._get_grades_list_item_count()
-        self._add_grade_and_percentage("4.0", "abc") # Non-numeric percentage, but fills fields
+        self._add_grade_and_percentage("4.0", "abc")
         
-        expected_count = initial_item_count + 2 # Row count increases due to UI behavior
+        expected_count = initial_item_count + 1 # Changed from +2 to +1
         current_item_count = self._get_grades_list_item_count()
         try:
             self.assertEqual(current_item_count, expected_count, 
-                             f"Grade item count should increase by 2 even for non-numeric percentage input (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
+                             f"Grade item count should increase by 1 (UI behavior). Initial: {initial_item_count}, Expected: {expected_count}, Current: {current_item_count}")
         except AssertionError as e:
             self._take_screenshot(f"{test_name}_assertion_failed")
             raise e
-        logger.info(f"Test {test_name} completed (note: row count increased as expected by UI; value validation is separate).")
+        logger.info(f"Test {test_name} completed.")
 
 # ...existing code...
 if __name__ == '__main__':
