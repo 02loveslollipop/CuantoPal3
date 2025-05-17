@@ -20,11 +20,12 @@ class HomePageTest(unittest.TestCase): # Changed base class
     PERCENTAGE_INPUT_SELECTOR = "input.home__input[placeholder=\"0\"][type=\"number\"]"
     ADD_GRADE_BUTTON_SELECTOR = "button.home__add-button" # Selector for "Agregar nota"
     GRADES_LIST_ITEM_SELECTOR = "div.home__grades-container > div.home__grade-row"
-    # Example: If there\'s a specific element for the grade value in a list item:
-    # GRADE_VALUE_IN_LIST_SELECTOR = ".grade-value-class" # Placeholder
-    # PERCENTAGE_VALUE_IN_LIST_SELECTOR = ".percentage-value-class" # Placeholder
     CALCULATE_BUTTON_SELECTOR = "button.home__calculate-button" # Selector for "Calcular
 
+    # Selectors for alerts and navigation
+    FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single" # For "Configurar" on first-time alert
+    ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
+    NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
 
     @classmethod
     def setUpClass(cls):
@@ -72,32 +73,58 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def _initial_setup(self): # Removed driver argument
         self.driver.get(self.BASE_URL) # Use BASE_URL
         
-        # Attempt to handle an initial alert/overlay
+        first_time_alert_handled = False
         try:
-            # Assuming the button to close the alert has the selector ".alert__button.alert__button--single"
-            # This selector might need to be confirmed if issues persist.
-            alert_button_selector = ".alert__button.alert__button--single" 
+            logger.info(f"Attempting to handle first-time alert with button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
             alert_button = WebDriverWait(self.driver, 5).until( # Using wait_short's timeout
-                EC.element_to_be_clickable((By.CSS_SELECTOR, alert_button_selector))
+                EC.element_to_be_clickable((By.CSS_SELECTOR, self.FIRST_TIME_ALERT_BUTTON_SELECTOR))
             )
             alert_button.click()
-            logger.info(f"Initial alert with button '{alert_button_selector}' handled.")
-            # Wait a very short moment for the overlay to disappear
-            time.sleep(0.5) 
-        except TimeoutException:
-            logger.info("Initial alert/overlay button not found or not clickable within timeout, proceeding.")
-        except Exception as e:
-            logger.warning(f"An unexpected error occurred while trying to handle initial alert: {e}")
-            self._take_screenshot("error_initial_alert_handling") # Optional: screenshot if alert handling fails unexpectedly
+            logger.info(f"Clicked first-time alert button: '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.");
 
+            # Wait for the overlay to become invisible
+            WebDriverWait(self.driver, 5).until( # Using wait_short's timeout
+                EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR))
+            )
+            logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible.")
+            first_time_alert_handled = True;
+            
+        except TimeoutException:
+            logger.info(f"First-time alert (button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}' or overlay '{self.ALERT_OVERLAY_SELECTOR}') not found or not handled within timeout. Assuming not first time or alert already dismissed.")
+            # self._take_screenshot("debug_first_time_alert_timeout") # Optional: for debugging if this path is unexpected
+        except Exception as e:
+            logger.warning(f"An unexpected error occurred while trying to handle first-time alert: {e}")
+            self._take_screenshot("error_initial_alert_handling")
+
+        if first_time_alert_handled:
+            try:
+                logger.info("First-time alert was handled, app should be on Settings page. Attempting to navigate back to Home.")
+                nav_back_button = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                nav_back_button.click()
+                logger.info("Clicked navigation bar 'Atras' button to return to Home page.")
+                # Add a short wait for page transition if necessary, before checking for home page elements
+                time.sleep(0.5) # Allow a moment for navigation
+            except TimeoutException:
+                logger.error(f"Failed to find or click the navigation bar 'Atras' button (XPATH: {self.NAV_BACK_BUTTON_XPATH}) after handling first-time alert.")
+                self._take_screenshot("error_nav_back_button_not_found")
+                # This is a critical failure in the setup flow if the first-time alert was handled
+                raise Exception("Failed to navigate back from Settings page during initial setup.")
+            except Exception as e:
+                logger.error(f"An error occurred clicking the navigation bar 'Atras' button: {e}")
+                self._take_screenshot("error_nav_back_button_click")
+                raise
+
+        # Final verification: Ensure the Home page grade input is present
         try:
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
-            logger.info(f"Grade input (\'{self.GRADE_INPUT_SELECTOR}\') found on page load at {self.BASE_URL}.")
+            logger.info(f"Grade input ('{self.GRADE_INPUT_SELECTOR}') found on page. Setup complete.")
         except TimeoutException:
             current_url = self.driver.current_url
-            logger.error(f"Failed to find grade input (\'{self.GRADE_INPUT_SELECTOR}\') on initial load. URL: {current_url}")
-            self._take_screenshot("error_initial_setup_grade_input_not_found")
-            raise Exception(f"Could not find the grade input (\'{self.GRADE_INPUT_SELECTOR}\') during setup. Current URL: {current_url}")
+            logger.error(f"Failed to find grade input ('{self.GRADE_INPUT_SELECTOR}') after setup attempts. Current URL: {current_url}")
+            self._take_screenshot("error_final_grade_input_not_found")
+            raise Exception(f"Could not find the grade input ('{self.GRADE_INPUT_SELECTOR}') after setup. Current URL: {current_url}")
 
     def _add_grade_and_percentage(self, grade, percentage): # Removed driver argument
         # Find the *first* available grade and percentage input.
@@ -213,7 +240,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_grade_input_below_range(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._initial_setup() # Already called by self.setUp()
+        # self._initial_setup() # Removed redundant call, already called by self.setUp()
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("-1.0", "20") # Invalid grade (below min 0)
@@ -228,7 +255,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_grade_input_above_range(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._initial_setup()
+        # self._initial_setup() # Removed redundant call
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("8.0", "20") # Invalid grade (above max 7)
@@ -242,7 +269,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_percentage_input_negative(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._initial_setup()
+        # self._initial_setup() # Removed redundant call
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("4.0", "-10") # Invalid percentage
@@ -256,7 +283,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     def test_us01_validate_percentage_input_non_numeric(self, request=None):
         test_name = request.node.name if request else self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._initial_setup()
+        # self._initial_setup() # Removed redundant call
 
         initial_item_count = self._get_grades_list_item_count()
         self._add_grade_and_percentage("4.0", "abc") # Non-numeric percentage
