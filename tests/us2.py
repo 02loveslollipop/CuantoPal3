@@ -24,7 +24,7 @@ class US02Tests(unittest.TestCase):
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
     HOME_CONTAINER_SELECTOR = "div.home__container"
-    DELETE_BUTTON_IN_ROW_SELECTOR = "button.home__delete-button"
+    DELETE_BUTTON_IN_ROW_SELECTOR = "button.home__remove-button" # Changed from home__delete-button
 
     def set_driver_fixture(self, driver):
         self.driver = driver
