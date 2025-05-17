@@ -26,6 +26,7 @@ class HomePageTest(unittest.TestCase): # Changed base class
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single" # For "Configurar" on first-time alert
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
+    HOME_CONTAINER_SELECTOR = "div.home__container" # Selector for a main container on the home page
 
     @classmethod
     def setUpClass(cls):
@@ -70,59 +71,80 @@ class HomePageTest(unittest.TestCase): # Changed base class
         except Exception as e:
             logger.error(f"Error saving screenshot {screenshot_name}: {e}")
 
-    def _initial_setup(self): # Removed driver argument
-        self.driver.get(self.BASE_URL) # Use BASE_URL
-        
-        first_time_alert_handled = False
+    def _initial_setup(self):
+        self.driver.get(self.BASE_URL)
+        logger.info(f"Navigated to base URL: {self.BASE_URL}")
+
         try:
+            # 1. Attempt to handle the first-time alert
             logger.info(f"Attempting to handle first-time alert with button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
-            alert_button = WebDriverWait(self.driver, 5).until( # Using wait_short's timeout
+            alert_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, self.FIRST_TIME_ALERT_BUTTON_SELECTOR))
             )
             alert_button.click()
-            logger.info(f"Clicked first-time alert button: '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.");
+            logger.info(f"Clicked first-time alert button: '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
 
-            # Wait for the overlay to become invisible
-            WebDriverWait(self.driver, 5).until( # Using wait_short's timeout
+            WebDriverWait(self.driver, 5).until(
                 EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR))
             )
-            logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible.")
-            first_time_alert_handled = True;
-            
-        except TimeoutException:
-            logger.info(f"First-time alert (button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}' or overlay '{self.ALERT_OVERLAY_SELECTOR}') not found or not handled within timeout. Assuming not first time or alert already dismissed.")
-            # self._take_screenshot("debug_first_time_alert_timeout") # Optional: for debugging if this path is unexpected
-        except Exception as e:
-            logger.warning(f"An unexpected error occurred while trying to handle first-time alert: {e}")
-            self._take_screenshot("error_initial_alert_handling")
+            logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible. App should be on Settings page.")
 
-        if first_time_alert_handled:
+            # 2. Attempt to navigate back from Settings page to Home page
             try:
-                logger.info("First-time alert was handled, app should be on Settings page. Attempting to navigate back to Home.")
+                logger.info("Attempting to navigate back from Settings to Home using nav-bar back button.")
                 nav_back_button = WebDriverWait(self.driver, 10).until(
                     EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
                 )
                 nav_back_button.click()
-                logger.info("Clicked navigation bar 'Atras' button to return to Home page.")
-                # Add a short wait for page transition if necessary, before checking for home page elements
-                time.sleep(0.5) # Allow a moment for navigation
-            except TimeoutException:
-                logger.error(f"Failed to find or click the navigation bar 'Atras' button (XPATH: {self.NAV_BACK_BUTTON_XPATH}) after handling first-time alert.")
-                self._take_screenshot("error_nav_back_button_not_found")
-                # This is a critical failure in the setup flow if the first-time alert was handled
-                raise Exception("Failed to navigate back from Settings page during initial setup.")
-            except Exception as e:
-                logger.error(f"An error occurred clicking the navigation bar 'Atras' button: {e}")
-                self._take_screenshot("error_nav_back_button_click")
-                raise
+                logger.info("Clicked navigation bar 'Atras' button.")
+                
+                # Wait for an element that indicates we are back on the Home page
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
+                )
+                logger.info(f"Successfully navigated back to Home page (found '{self.HOME_CONTAINER_SELECTOR}').")
+            except Exception as nav_exc:
+                logger.error(f"Navigation back to Home page failed: {nav_exc}. Attempting recovery.")
+                self._take_screenshot("error_nav_back_failed_recovery_attempt")
+                # Recovery: Go back to base URL and try to click alert again (if it reappears or if it was a different issue)
+                self.driver.get(self.BASE_URL)
+                logger.info(f"Recovery: Navigated back to base URL: {self.BASE_URL}")
+                try:
+                    # This alert click might not be necessary if localStorage is already set,
+                    # but follows the pattern of the user's original recovery logic.
+                    alert_button_recovery = WebDriverWait(self.driver, 5).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, self.FIRST_TIME_ALERT_BUTTON_SELECTOR))
+                    )
+                    alert_button_recovery.click()
+                    logger.info("Recovery: Clicked first-time alert button again.")
+                    WebDriverWait(self.driver, 5).until(
+                        EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR))
+                    )
+                    logger.info("Recovery: Alert overlay is no longer visible after second attempt.")
+                    # After this, the final verification for GRADE_INPUT_SELECTOR will run.
+                    # If this recovery path is taken, and we are not on settings, the next check for GRADE_INPUT_SELECTOR should pass.
+                    # If we are on settings, the check will fail, which is an unrecoverable state for this setup.
+                except TimeoutException:
+                    logger.info("Recovery: First-time alert button not found on second attempt. Assuming Home page or non-first-time state.")
+                except Exception as recovery_alert_exc:
+                    logger.warning(f"Recovery: Error clicking alert button on second attempt: {recovery_alert_exc}")
+
+        except TimeoutException:
+            logger.info(f"First-time alert (button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}') not found. Assuming not first time or alert already dismissed.")
+            # No action needed if the alert isn't there, proceed to final verification.
+        except Exception as e:
+            logger.warning(f"An unexpected error occurred during initial alert handling phase: {e}")
+            self._take_screenshot("error_initial_alert_phase")
 
         # Final verification: Ensure the Home page grade input is present
         try:
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
+            WebDriverWait(self.driver, 15).until( # Using self.wait_long effectively
+                EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR))
+            )
             logger.info(f"Grade input ('{self.GRADE_INPUT_SELECTOR}') found on page. Setup complete.")
         except TimeoutException:
             current_url = self.driver.current_url
-            logger.error(f"Failed to find grade input ('{self.GRADE_INPUT_SELECTOR}') after setup attempts. Current URL: {current_url}")
+            logger.error(f"FINAL SETUP FAILURE: Failed to find grade input ('{self.GRADE_INPUT_SELECTOR}') after all attempts. Current URL: {current_url}")
             self._take_screenshot("error_final_grade_input_not_found")
             raise Exception(f"Could not find the grade input ('{self.GRADE_INPUT_SELECTOR}') after setup. Current URL: {current_url}")
 
