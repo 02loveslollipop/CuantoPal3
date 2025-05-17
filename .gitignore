@@ -1,2 +1,4 @@
 /html
 *.code-workspace
+selenium-test-dev.md
+tests/test_doc.md
