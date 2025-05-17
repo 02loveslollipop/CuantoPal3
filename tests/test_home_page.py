@@ -10,16 +10,58 @@ class TestHomePage:
     def _initial_setup(self, driver):
         base_url = os.environ.get('APP_URL', 'http://localhost:3000')
         driver.get(base_url)
+        time.sleep(1) # Allow a brief moment for initial rendering
+
+        # 1. Handle initial alert (if any)
         try:
-            # Wait for and click the initial alert button if present
             alert_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
             )
             alert_button.click()
+            # Wait for the alert to disappear or for a subsequent element if needed
+            WebDriverWait(driver, 5).until(EC.staleness_of(alert_button))
+            print("Initial alert handled.")
         except TimeoutException:
-            print("Initial alert not found or not clickable within 10s, proceeding with test.")
+            print("Initial alert not found or not clickable within 10s.")
         except Exception as e:
-            print(f"An unexpected error occurred during initial alert handling: {e}, proceeding with test.")
+            print(f"Error clicking initial alert: {e}, proceeding.")
+
+        # 2. Check if we are on the main page (with grade-input) or need to navigate back
+        try:
+            # Try to find a main page element immediately. If present, we are good.
+            WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.ID, "grade-input")))
+            print("Already on the main page with grade input.")
+            return # Already on the correct page
+        except TimeoutException:
+            print("Grade input not immediately visible. Attempting navigation back from potential settings/initial page.")
+            try:
+                # If not on main page, try to click a common 'back' or 'home' button
+                # Using ".nav-bar__button" from the original test_home_page_functional_flow
+                back_button = WebDriverWait(driver, 10).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, ".nav-bar__button"))
+                )
+                back_button.click()
+                print("Clicked .nav-bar__button.")
+                # Wait for the main page element to ensure navigation was successful
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "grade-input"))
+                )
+                print("Successfully navigated to the main page with grade-input after clicking back.")
+            except TimeoutException:
+                print("Failed to find grade-input after attempting back navigation.")
+                os.makedirs("screenshots", exist_ok=True)
+                driver.save_screenshot(f"screenshots/error_initial_setup_navigation_timeout_{int(time.time())}.png")
+                raise Exception("Could not navigate to the main page with grade-input during setup.")
+            except Exception as e_nav:
+                print(f"Error during back navigation attempt: {e_nav}")
+                os.makedirs("screenshots", exist_ok=True)
+                driver.save_screenshot(f"screenshots/error_initial_setup_navigation_exception_{int(time.time())}.png")
+                raise e_nav
+        except Exception as e_main_check:
+            print(f"Unexpected error during initial page check: {e_main_check}")
+            os.makedirs("screenshots", exist_ok=True)
+            driver.save_screenshot(f"screenshots/error_initial_setup_main_check_exception_{int(time.time())}.png")
+            raise e_main_check
 
     def _add_grade_and_percentage(self, driver, grade, percentage):
         grade_input = WebDriverWait(driver, 10).until(
