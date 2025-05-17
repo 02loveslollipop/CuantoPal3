@@ -248,12 +248,15 @@ class US04Tests(unittest.TestCase):
             self._add_grade_and_percentage("4.5", "20") # Adds and clicks "Agregar nota"
             
             calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
+            logger.info(f"Before clicking 'Calcular'. Current URL: {self.driver.current_url}")
             calculate_button.click()
-            logger.info("Clicked 'Calcular' button. Expecting navigation to /result.")
+            logger.info(f"Immediately after attempting to click 'Calcular'. Current URL: {self.driver.current_url}")
+            self._take_screenshot("after_calculate_click_attempt") # Screenshot right after click
+            time.sleep(1) # Small pause to allow DOM changes/navigation to initiate
             
-            # Wait for navigation to result page and for the average display to be ready
-            self.wait_long.until(EC.url_contains("/result"))
-            logger.info(f"Navigated to {self.driver.current_url}")
+            logger.info(f"After 1s delay. Current URL: {self.driver.current_url}. Now waiting for URL to contain '/result'...")
+            self.wait_long.until(EC.url_contains("/result")) # This is where the timeout occurs
+            logger.info(f"Successfully navigated to {self.driver.current_url}. Checking for result container.")
 
             current_avg_1 = self._get_current_weighted_average()
             expected_avg_1 = 0.9 # (4.5 * 20) / 100 = 90 / 100 = 0.9
