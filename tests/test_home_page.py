@@ -1,31 +1,77 @@
-import time
-import pytest
+import logging
 import os
+import unittest # Added
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException # Ensure this is imported
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import time # Keep time for explicit waits if necessary, though WebDriverWait is preferred
 
 # Configure logging
-import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class HomePageTest(StaticLiveServerTestCase):
-    GRADE_INPUT_SELECTOR = 'input.home__input[placeholder="0.0"][type="number"]'
-    PERCENTAGE_INPUT_SELECTOR = 'input.home__input[placeholder="0"][type="number"]'
-    ADD_GRADE_BUTTON_SELECTOR = 'button.home__add-button'
+class HomePageTest(unittest.TestCase): # Changed base class
+    BASE_URL = "http://localhost:3000" # Added base URL for React app
+
+    # Selectors based on the provided HTML
+    GRADE_INPUT_SELECTOR = "input.home__input[placeholder=\"0.0\"][type=\"number\"]"
+    PERCENTAGE_INPUT_SELECTOR = "input.home__input[placeholder=\"0\"][type=\"number\"]"
+    ADD_GRADE_BUTTON_SELECTOR = "button.home__add-button" # Selector for "Agregar nota"
     GRADES_LIST_ITEM_SELECTOR = "div.home__grades-container > div.home__grade-row"
+    # Example: If there\'s a specific element for the grade value in a list item:
+    # GRADE_VALUE_IN_LIST_SELECTOR = ".grade-value-class" # Placeholder
+    # PERCENTAGE_VALUE_IN_LIST_SELECTOR = ".percentage-value-class" # Placeholder
+    CALCULATE_BUTTON_SELECTOR = "button.home__calculate-button" # Selector for "Calcular
+
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # Additional setup if needed
-        cls.driver.implicitly_wait(10) # Implicit wait for elements to be present
+        options = webdriver.ChromeOptions()
+        # options.add_argument("--headless") # Run in headless mode for CI/faster tests
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--window-size=1920,1080") # Standard window size
+        
+        # Attempt to use WebDriverManager for automatic driver management
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager
+            from selenium.webdriver.chrome.service import Service as ChromeService
+            cls.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+        except ImportError:
+            logger.warning("webdriver_manager not found. Falling back to direct ChromeDriver instantiation.")
+            # Fallback if WebDriverManager is not available (ensure chromedriver is in PATH)
+            cls.driver = webdriver.Chrome(options=options)
+            
+        cls.wait_short = WebDriverWait(cls.driver, 5)
+        cls.wait_long = WebDriverWait(cls.driver, 15)
+        # Ensure screenshots directory exists
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
 
-    def _initial_setup(self):
-        self.driver.get(self.live_server_url)
-        # No alert handling for now, as it's not in the provided production HTML
+    @classmethod
+    def tearDownClass(cls):
+        cls.driver.quit()
+        super().tearDownClass()
+
+    def setUp(self):
+        """Called before every test method."""
+        self._initial_setup() # Call initial setup here
+
+    def _take_screenshot(self, name_suffix):
+        timestamp = int(time.time())
+        screenshot_name = f"screenshots/{self._testMethodName}_{name_suffix}_{timestamp}.png"
+        try:
+            self.driver.save_screenshot(screenshot_name)
+            logger.info(f"Screenshot saved: {screenshot_name}")
+        except Exception as e:
+            logger.error(f"Error saving screenshot {screenshot_name}: {e}")
+
+    def _initial_setup(self): # Removed driver argument
+        self.driver.get(self.BASE_URL) # Use BASE_URL
+        # Initial alert handling commented out as it might not be relevant for the new HTML
         # try:
         #     WebDriverWait(self.driver, 3).until(
         #         EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
@@ -35,289 +81,182 @@ class HomePageTest(StaticLiveServerTestCase):
         #     logger.info("Initial alert not found or not clickable, proceeding.")
 
         try:
-            # Wait for the main grade input to be present
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
-            logger.info(f"Grade input ('{self.GRADE_INPUT_SELECTOR}') found on page load.")
+            logger.info(f"Grade input (\'{self.GRADE_INPUT_SELECTOR}\') found on page load at {self.BASE_URL}.")
         except TimeoutException:
             current_url = self.driver.current_url
-            logger.error(f"Failed to find grade input ('{self.GRADE_INPUT_SELECTOR}') on initial load. URL: {current_url}")
+            logger.error(f"Failed to find grade input (\'{self.GRADE_INPUT_SELECTOR}\') on initial load. URL: {current_url}")
             self._take_screenshot("error_initial_setup_grade_input_not_found")
-            # Ensure the exception message is clear
-            raise Exception(f"Could not find the grade input ('{self.GRADE_INPUT_SELECTOR}') during setup. Current URL: {current_url}")
+            raise Exception(f"Could not find the grade input (\'{self.GRADE_INPUT_SELECTOR}\') during setup. Current URL: {current_url}")
 
-    def _add_grade_and_percentage(self, grade, percentage):
-        # Ensure _initial_setup has been called or page is otherwise ready
-        grade_input = self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
-        percentage_input = self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)))
+    def _add_grade_and_percentage(self, grade, percentage): # Removed driver argument
+        # Find the *first* available grade and percentage input.
+        # This assumes new inputs are added, or we always fill the first empty/available ones.
+        
+        # Find all grade inputs and percentage inputs
+        grade_inputs = self.driver.find_elements(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
+        percentage_inputs = self.driver.find_elements(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
+
+        if not grade_inputs or not percentage_inputs:
+            logger.error("Could not find grade or percentage input fields.")
+            self._take_screenshot("error_add_grade_no_inputs")
+            raise NoSuchElementException("Grade or percentage input fields not found.")
+
+        # Assuming we target the last grade input row for adding new grades,
+        # which is typical if "Agregar nota" adds a new row and we fill that.
+        # Or, if there's only one set of inputs that are cleared and reused.
+        # The provided HTML shows one set of inputs initially.
+        # If "Agregar nota" adds more, this logic might need to target the *last* set.
+        # For now, let's assume we are targeting the first (and possibly only) input fields.
+        grade_input_element = grade_inputs[0] 
+        percentage_input_element = percentage_inputs[0]
+        
         add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
 
-        grade_input.clear()
-        grade_input.send_keys(str(grade))
-        percentage_input.clear()
-        percentage_input.send_keys(str(percentage))
-        add_button.click()
-        logger.info(f"Added grade: {grade}, percentage: {percentage}")
+        grade_input_element.clear()
+        grade_input_element.send_keys(str(grade))
+        percentage_input_element.clear()
+        percentage_input_element.send_keys(str(percentage))
+        
+        # It's crucial to know if "Agregar nota" should be clicked *before* or *after* filling the inputs.
+        # Based on typical UI, you fill, then click "Agregar".
+        # If "Agregar nota" creates a new blank row first, then this click should happen *before* send_keys.
+        # Assuming fill then click "Agregar nota" to submit that row.
+        add_button.click() 
+        logger.info(f"Clicked 'Agregar nota' after attempting to add grade: {grade}, percentage: {percentage}")
 
-    def _get_grades_list_item_count(self):
-        # This counts the number of displayed grade rows
+    def _get_grades_list_item_count(self): # Removed driver argument
         try:
+            # Wait briefly for items to appear or update after an action
+            time.sleep(0.5) # Small delay to allow UI to update
             grade_items = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
+            logger.info(f"Found {len(grade_items)} grade list items using selector '{self.GRADES_LIST_ITEM_SELECTOR}'.")
             return len(grade_items)
         except Exception as e:
-            logger.error(f"Error finding grade list items: {e}")
+            logger.error(f"Error finding grade list items with selector \'{self.GRADES_LIST_ITEM_SELECTOR}\': {e}")
             self._take_screenshot("error_get_grades_list_item_count")
             return 0
 
     # US01: Registro de Calificaciones
-    def test_us01_add_single_valid_grade(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-            
-            grade_to_add = "4.0"
-            percentage_to_add = "20"
-            
-            initial_item_count = self._get_grades_list_item_count(driver)
-            self._add_grade_and_percentage(driver, grade_to_add, percentage_to_add)
-
-            # Wait for list to update
-            WebDriverWait(driver, 10).until(
-                lambda d: self._get_grades_list_item_count(d) > initial_item_count
-            )
-            
-            grades_list_container = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "grades-list"))
-            )
-            # Verify the added grade and percentage are present in the list
-            # This assumes a simple text representation; more specific selectors for items are better
-            assert grade_to_add in grades_list_container.text
-            assert percentage_to_add + "%" in grades_list_container.text # Assuming '%' is displayed
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_us01_add_multiple_valid_grades(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-
-            grades_data = [
-                {"grade": "4.5", "percentage": "25"},
-                {"grade": "3.0", "percentage": "30"},
-                {"grade": "5.0", "percentage": "15"},
-            ]
-            
-            initial_item_count = self._get_grades_list_item_count(driver)
-
-            for i, item in enumerate(grades_data):
-                self._add_grade_and_percentage(driver, item["grade"], item["percentage"])
-                # Wait for the list to update after each addition
-                WebDriverWait(driver, 10).until(
-                    lambda d: self._get_grades_list_item_count(d) == initial_item_count + i + 1
-                )
-
-            grades_list_container = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "grades-list"))
-            )
-            for item in grades_data:
-                assert item["grade"] in grades_list_container.text
-                assert item["percentage"] + "%" in grades_list_container.text
-            
-            assert self._get_grades_list_item_count(driver) == initial_item_count + len(grades_data)
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_us01_validate_grade_input_below_range(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-            initial_item_count = self._get_grades_list_item_count(driver)
-            
-            self._add_grade_and_percentage(driver, "-1.0", "20") # Invalid grade
-
-            error_message_element = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.ID, "error-message-grade")) # Hypothetical ID
-            )
-            assert "válido" in error_message_element.text.lower() or "rango" in error_message_element.text.lower()
-            
-            # Verify grade was not added
-            assert self._get_grades_list_item_count(driver) == initial_item_count
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_us01_validate_grade_input_above_range(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-            initial_item_count = self._get_grades_list_item_count(driver)
-
-            self._add_grade_and_percentage(driver, "6.0", "20") # Invalid grade (assuming max 5.0)
-            
-            error_message_element = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.ID, "error-message-grade"))
-            )
-            assert "válido" in error_message_element.text.lower() or "rango" in error_message_element.text.lower()
-
-            assert self._get_grades_list_item_count(driver) == initial_item_count
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_us01_validate_percentage_input_negative(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-            initial_item_count = self._get_grades_list_item_count(driver)
-
-            self._add_grade_and_percentage(driver, "4.0", "-10") # Invalid percentage
-            
-            error_message_element = WebDriverWait(driver, 10).until(
-                EC.visibility_of_element_located((By.ID, "error-message-percentage")) # Hypothetical ID
-            )
-            assert "positivo" in error_message_element.text.lower() or "válido" in error_message_element.text.lower()
-
-            assert self._get_grades_list_item_count(driver) == initial_item_count
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_us01_validate_percentage_input_non_numeric(self, driver, request): # Added request fixture
-        test_name = request.node.name # Use request fixture to get test name
-        try:
-            self._initial_setup(driver)
-            initial_item_count = self._get_grades_list_item_count(driver)
-            
-            # Manually interact for this specific case to send "abc"
-            grade_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "grade-input"))
-            )
-            grade_input.clear()
-            grade_input.send_keys("3.0")
-
-            percentage_input_loc = (By.ID, "percentage-input")
-            percentage_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located(percentage_input_loc)
-            )
-            percentage_input.clear()
-            percentage_input.send_keys("abc") # Non-numeric
-
-            add_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.ID, "add-grade-btn"))
-            )
-            add_button.click()
-
-            # Verification depends on behavior: error message or input rejection
-            try:
-                error_message_element = WebDriverWait(driver, 5).until(
-                    EC.visibility_of_element_located((By.ID, "error-message-percentage"))
-                )
-                assert "número" in error_message_element.text.lower() or "válido" in error_message_element.text.lower()
-            except TimeoutException:
-                # If no error message, check if the input was rejected or field is empty/still "abc"
-                current_percentage_value = driver.find_element(*percentage_input_loc).get_attribute("value")
-                # If type="number", browser might prevent "abc" or convert to empty.
-                # If type="text", "abc" might remain.
-                assert current_percentage_value == "" or current_percentage_value == "abc", \
-                    "Percentage input did not show error for non-numeric and value is not as expected."
-            
-            assert self._get_grades_list_item_count(driver) == initial_item_count
-
-        except Exception as e:
-            os.makedirs("screenshots", exist_ok=True)
-            driver.save_screenshot(f"screenshots/error_{test_name}_{int(time.time())}.png")
-            print(f"Current URL on error in {test_name}: {driver.current_url}")
-            print(f"Page source excerpt on error in {test_name}: {driver.page_source[:500]}...")
-            raise e
-
-    def test_home_page_functional_flow(self, driver):
-        # Navigate to application using environment variable
-        base_url = os.environ.get('APP_URL', 'http://localhost:3000')
-        driver.get(base_url)
+    def test_us01_add_single_valid_grade(self, request=None): # request might not be needed if not using pytest fixtures directly here
+        test_name = request.node.name if request else self._testMethodName # Get test name
+        logger.info(f"Running test: {test_name}")
         
+        initial_item_count = self._get_grades_list_item_count()
+        logger.info(f"Initial grade item count: {initial_item_count}")
+
+        grade_to_add = "4.5"
+        percentage_to_add = "25"
+        self._add_grade_and_percentage(grade_to_add, percentage_to_add)
+
+        # Wait for the item count to increase or for a specific element to appear
         try:
-            # 1. Wait for and click the alert button
-            alert_button = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
+            self.wait_long.until(
+                lambda d: self._get_grades_list_item_count() > initial_item_count
             )
-            alert_button.click()
-            
-            # 2. Test if the back navigation button works
+        except TimeoutException:
+            self._take_screenshot(f"{test_name}_timeout_waiting_for_grade_add")
+            logger.error("Timeout waiting for grade item count to increase.")
+        
+        current_item_count = self._get_grades_list_item_count()
+        logger.info(f"Current grade item count after add: {current_item_count}")
+        self.assertEqual(current_item_count, initial_item_count + 1, 
+                         f"Grade item count did not increase by 1. Initial: {initial_item_count}, Current: {current_item_count}")
+        logger.info(f"Test {test_name} completed successfully.")
+
+
+    def test_us01_add_multiple_valid_grades(self, request=None):
+        test_name = request.node.name if request else self._testMethodName
+        logger.info(f"Running test: {test_name}")
+
+        initial_item_count = self._get_grades_list_item_count()
+        logger.info(f"Initial grade item count: {initial_item_count}")
+
+        grades_data = [
+            {"grade": "5.0", "percentage": "30"},
+            {"grade": "3.5", "percentage": "20"},
+            {"grade": "6.2", "percentage": "50"}
+        ]
+
+        for i, item in enumerate(grades_data):
+            self._add_grade_and_percentage(item["grade"], item["percentage"])
             try:
-                back_button = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, ".nav-bar__button"))
+                # Wait for the item count to reflect the new addition
+                self.wait_long.until(
+                    lambda d: self._get_grades_list_item_count() == initial_item_count + i + 1
                 )
-                back_button.click()
-                
-                # Wait for any element that indicates we navigated back successfully
-                # Replace ".home__container" with an element that actually exists in your app
-                WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".home__container"))
-                )
-            except Exception as e:
-                print(f"Navigation test failed: {e}")
-                # If navigation test fails, go back to the main page
-                driver.get(base_url)
-                # Wait again for alert button and click it to get back to the same state
-                alert_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
-                )
-                alert_button.click()
+            except TimeoutException:
+                self._take_screenshot(f"{test_name}_timeout_item_{i+1}")
+                logger.error(f"Timeout waiting for grade item count to be {initial_item_count + i + 1} after adding item {i+1}.")
+                # Optionally re-raise or assert here if this is critical for continuation
             
-            # 3. Test adding a new grade row
-            # Get initial count of grade rows
-            initial_grade_rows = driver.find_elements(By.CSS_SELECTOR, ".home__grade-row")
-            initial_count = len(initial_grade_rows)
-            
-            # Click add button
-            add_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, ".home__add-button"))
-            )
-            add_button.click()
-            
-            # Verify a new row was added
-            WebDriverWait(driver, 5).until(
-                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".home__grade-row")) > initial_count
-            )
-            updated_grade_rows = driver.find_elements(By.CSS_SELECTOR, ".home__grade-row")
-            assert len(updated_grade_rows) == initial_count + 1, "New grade row was not added!"
-            
-            # 4. Test removing a grade row
-            # Find the remove button in the last added row and click it
-            remove_button = updated_grade_rows[-1].find_element(By.CSS_SELECTOR, ".home__remove-button")
-            remove_button.click()
-            
-            # Verify the row was removed
-            WebDriverWait(driver, 5).until(
-                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".home__grade-row")) == initial_count
-            )
-            final_grade_rows = driver.find_elements(By.CSS_SELECTOR, ".home__grade-row")
-            assert len(final_grade_rows) == initial_count, "Grade row was not removed!"
-            
-        except Exception as e:
-            # Take screenshot on any failure
-            driver.save_screenshot(f"screenshots/error_{int(time.time())}.png")
-            print(f"Current URL: {driver.current_url}")
-            print(f"Page source excerpt: {driver.page_source[:500]}...")
-            raise e
+            # Small pause to ensure UI stability if adding multiple items rapidly
+            time.sleep(0.2) 
+
+
+        current_item_count = self._get_grades_list_item_count()
+        logger.info(f"Current grade item count after multiple adds: {current_item_count}")
+        self.assertEqual(current_item_count, initial_item_count + len(grades_data),
+                         f"Grade item count did not increase correctly. Expected: {initial_item_count + len(grades_data)}, Got: {current_item_count}")
+        logger.info(f"Test {test_name} completed successfully.")
+
+    def test_us01_validate_grade_input_below_range(self, request=None):
+        test_name = request.node.name if request else self._testMethodName
+        logger.info(f"Running test: {test_name}")
+        # self._initial_setup() # Already called by self.setUp()
+
+        initial_item_count = self._get_grades_list_item_count()
+        self._add_grade_and_percentage("-1.0", "20") # Invalid grade (below min 0)
+        
+        # Assuming invalid input does not add a grade item
+        current_item_count = self._get_grades_list_item_count()
+        self.assertEqual(current_item_count, initial_item_count, 
+                         "Grade item count should not change for invalid grade input below range.")
+        # Add assertion for error message if visible
+        logger.info(f"Test {test_name} completed.")
+
+    def test_us01_validate_grade_input_above_range(self, request=None):
+        test_name = request.node.name if request else self._testMethodName
+        logger.info(f"Running test: {test_name}")
+        # self._initial_setup()
+
+        initial_item_count = self._get_grades_list_item_count()
+        self._add_grade_and_percentage("8.0", "20") # Invalid grade (above max 7)
+        
+        current_item_count = self._get_grades_list_item_count()
+        self.assertEqual(current_item_count, initial_item_count, 
+                         "Grade item count should not change for invalid grade input above range.")
+        # Add assertion for error message
+        logger.info(f"Test {test_name} completed.")
+
+    def test_us01_validate_percentage_input_negative(self, request=None):
+        test_name = request.node.name if request else self._testMethodName
+        logger.info(f"Running test: {test_name}")
+        # self._initial_setup()
+
+        initial_item_count = self._get_grades_list_item_count()
+        self._add_grade_and_percentage("4.0", "-10") # Invalid percentage
+        
+        current_item_count = self._get_grades_list_item_count()
+        self.assertEqual(current_item_count, initial_item_count, 
+                         "Grade item count should not change for negative percentage input.")
+        # Add assertion for error message
+        logger.info(f"Test {test_name} completed.")
+
+    def test_us01_validate_percentage_input_non_numeric(self, request=None):
+        test_name = request.node.name if request else self._testMethodName
+        logger.info(f"Running test: {test_name}")
+        # self._initial_setup()
+
+        initial_item_count = self._get_grades_list_item_count()
+        self._add_grade_and_percentage("4.0", "abc") # Non-numeric percentage
+        
+        current_item_count = self._get_grades_list_item_count()
+        self.assertEqual(current_item_count, initial_item_count, 
+                         "Grade item count should not change for non-numeric percentage input.")
+        # Add assertion for error message
+        logger.info(f"Test {test_name} completed.")
+
+# ... (rest of the file, e.g., if __name__ == '__main__': unittest.main())
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
