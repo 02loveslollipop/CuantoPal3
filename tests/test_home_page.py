@@ -71,14 +71,24 @@ class HomePageTest(unittest.TestCase): # Changed base class
 
     def _initial_setup(self): # Removed driver argument
         self.driver.get(self.BASE_URL) # Use BASE_URL
-        # Initial alert handling commented out as it might not be relevant for the new HTML
-        # try:
-        #     WebDriverWait(self.driver, 3).until(
-        #         EC.element_to_be_clickable((By.CSS_SELECTOR, ".alert__button.alert__button--single"))
-        #     ).click()
-        #     logger.info("Initial alert handled.")
-        # except TimeoutException:
-        #     logger.info("Initial alert not found or not clickable, proceeding.")
+        
+        # Attempt to handle an initial alert/overlay
+        try:
+            # Assuming the button to close the alert has the selector ".alert__button.alert__button--single"
+            # This selector might need to be confirmed if issues persist.
+            alert_button_selector = ".alert__button.alert__button--single" 
+            alert_button = WebDriverWait(self.driver, 5).until( # Using wait_short's timeout
+                EC.element_to_be_clickable((By.CSS_SELECTOR, alert_button_selector))
+            )
+            alert_button.click()
+            logger.info(f"Initial alert with button '{alert_button_selector}' handled.")
+            # Wait a very short moment for the overlay to disappear
+            time.sleep(0.5) 
+        except TimeoutException:
+            logger.info("Initial alert/overlay button not found or not clickable within timeout, proceeding.")
+        except Exception as e:
+            logger.warning(f"An unexpected error occurred while trying to handle initial alert: {e}")
+            # self._take_screenshot("error_initial_alert_handling") # Optional: screenshot if alert handling fails unexpectedly
 
         try:
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)))
