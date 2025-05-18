@@ -83,13 +83,27 @@ class US04Tests(unittest.TestCase):
     def _get_current_weighted_average(self):
         """Extract and return the current weighted average from the result page."""
         try:
-            current_avg_element = self.wait_long.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
+            # Take screenshot to debug what we're seeing
+            self._take_screenshot("result_page_before_extract_average")
+            
+            # Make sure we are on the result page
+            self.wait_long.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR))
             )
+            
+            # Wait for average display element
+            current_avg_element = self.wait_long.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
+            )
+            
+            # Small delay to make sure text is fully loaded/rendered
+            time.sleep(0.2)
+            
             current_avg_text = current_avg_element.text.strip()
             logger.info(f"Current average text found: '{current_avg_text}'")
             
             # Extract the numeric value using regex - looking for decimal number
+            # Example text: "Promedio actual: 1.8"
             match = re.search(r'(\d+\.\d+)', current_avg_text)
             if match:
                 current_avg = float(match.group(1))
@@ -97,6 +111,17 @@ class US04Tests(unittest.TestCase):
                 return current_avg
             else:
                 logger.error(f"Failed to extract numeric average from text: '{current_avg_text}'")
+                # Try an alternative approach - get the raw text content
+                raw_text = current_avg_element.get_attribute('textContent').strip()
+                logger.info(f"Raw text content: '{raw_text}'")
+                
+                # Try to find any decimal number in the raw text
+                alt_match = re.search(r'(\d+\.\d+)', raw_text)
+                if alt_match:
+                    current_avg = float(alt_match.group(1))
+                    logger.info(f"Extracted current average from raw text: {current_avg}")
+                    return current_avg
+                
                 self._take_screenshot("average_extraction_failed")
                 self.fail(f"Could not extract numeric average from: '{current_avg_text}'")
                 
@@ -170,87 +195,140 @@ class US04Tests(unittest.TestCase):
             logger.error(f"An unexpected error occurred during initial setup: {e}", exc_info=True)
             self._take_screenshot("initial_setup_error")
             self.fail(f"Unexpected error during initial setup: {e}")
-
+                
     def _add_grade_and_percentage(self, grade, percentage):
         if not hasattr(self, 'driver') or not self.driver:
             logger.error("Driver not available in _add_grade_and_percentage.")
             self.fail("Driver not available.")
             return
 
+        # First check if we're on the result page and navigate back if needed
         on_result_page = False
         try:
-            # Check if the result page container is present
             if self.driver.find_element(By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR).is_displayed():
                 on_result_page = True
         except NoSuchElementException:
-            on_result_page = False # Not on result page
+            on_result_page = False
 
         if on_result_page:
-            logger.info("Currently on result page (detected by element presence), navigating back to home to add grades.")
+            logger.info("Currently on result page, navigating back to home to add grades.")
             try:
+                # First try with the CSS selector
                 nav_back_button = self.wait_short.until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
                 )
                 logger.info("Found back button using CSS selector in _add_grade_and_percentage.")
             except TimeoutException:
-                logger.info("CSS selector failed for back button in _add_grade_and_percentage, trying XPath...")
-                nav_back_button = self.wait_long.until(
-                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
-                )
-                logger.info("Found back button using XPath selector in _add_grade_and_percentage.")
-                
+                try:
+                    # Then try with XPath
+                    logger.info("CSS selector failed for back button in _add_grade_and_percentage, trying XPath...")
+                    nav_back_button = self.wait_long.until(
+                        EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                    )
+                    logger.info("Found back button using XPath selector in _add_grade_and_percentage.")
+                except TimeoutException:
+                    # As a last resort, try to find any buttons in the nav bar
+                    logger.info("XPath also failed. Looking for any button in the nav bar...")
+                    nav_bar = self.wait_long.until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "nav.nav-bar"))
+                    )
+                    nav_buttons = nav_bar.find_elements(By.TAG_NAME, "button")
+                    if nav_buttons:
+                        nav_back_button = nav_buttons[0]  # First button in nav bar is usually back
+                        logger.info("Using first button found in nav bar")
+                    else:
+                        logger.error("No buttons found in nav bar")
+                        self._take_screenshot("no_buttons_in_nav_bar_add_grade")
+                        self.fail("No buttons found in nav bar when trying to navigate back")
+            
+            # Click the back button once found
             nav_back_button.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            logger.info("Navigated back to home page.")
+            logger.info("Successfully navigated back to home page.")
+            
+            # Take a small pause to ensure the UI is fully loaded
+            time.sleep(0.5)
 
+        # Now we're on the home page
+        # Take a screenshot of the current state for debugging
+        self._take_screenshot("before_adding_grade")
+        
+        # Find all grade rows currently in the UI
         grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-        if not grade_rows:
-            logger.warning("No grade rows found. Attempting to add one by clicking the global 'Add Grade' button.")
-            self._take_screenshot("no_grade_rows_found")
+        logger.info(f"Found {len(grade_rows)} grade rows before adding.")
+        
+        # First check if we need to add a new row
+        need_new_row = True
+        if grade_rows:
+            # Check if the last row is empty (which means we can use it)
+            last_row = grade_rows[-1]
             try:
-                # This assumes ADD_GRADE_BUTTON_SELECTOR is the button that adds a new empty row for input
-                add_button_global = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
-                add_button_global.click()
-                time.sleep(0.5) # Allow time for the row to be added dynamically
-                grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-                if not grade_rows:
-                    logger.error("Still no grade rows found after attempting to add one.")
-                    self._take_screenshot("failed_to_add_initial_row")
-                    self.fail("Still no grade rows found after attempting to add one.")
-                    return
-                logger.info(f"Successfully added an initial grade row. Now {len(grade_rows)} rows.")
-            except Exception as ex:
-                logger.error(f"Failed to create an initial grade row by clicking add button: {ex}", exc_info=True)
-                self._take_screenshot("create_initial_row_exception")
-                self.fail(f"Failed to create an initial grade row: {ex}")
-                return
-
+                grade_input = last_row.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
+                percentage_input = last_row.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
+                
+                grade_value = grade_input.get_attribute("value")
+                percentage_value = percentage_input.get_attribute("value")
+                
+                # If both inputs are empty, we can use this row
+                if not grade_value and not percentage_value:
+                    need_new_row = False
+                    logger.info("Found empty row to use for new grade entry.")
+            except NoSuchElementException:
+                # If we can't find inputs in the last row, we'll add a new one
+                logger.warning("Last row doesn't have expected input elements.")
+                need_new_row = True
+        
+        # If we need a new row or there are no rows, add one
+        if need_new_row or not grade_rows:
+            logger.info("Adding a new grade row...")
+            add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
+            add_button.click()
+            time.sleep(0.5)  # Wait for the row to be added
+            
+            # Refresh the list of grade rows
+            grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
+            if not grade_rows:
+                logger.error("Failed to add grade row - no rows found after clicking 'Add' button")
+                self._take_screenshot("failed_to_add_grade_row")
+                self.fail("Failed to add grade row - no rows found after clicking 'Add' button")
+        
+        # Now use the last row to add our grade
         last_row = grade_rows[-1]
-        logger.info(f"Targeting the last of {len(grade_rows)} grade rows for input.")
-
+        logger.info(f"Using the last of {len(grade_rows)} rows to add grade: {grade}, percentage: {percentage}")
+        
         try:
             grade_input_element = last_row.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
             percentage_input_element = last_row.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
+            
+            # Clear and enter the grade and percentage
+            grade_input_element.clear()
+            grade_input_element.send_keys(str(grade))
+            percentage_input_element.clear()
+            percentage_input_element.send_keys(str(percentage))
+            
+            # Take screenshot after entering values
+            self._take_screenshot(f"after_entering_grade_{grade}_percent_{percentage}")
+            
+            # Click the add button to confirm this grade
+            add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
+            add_button.click()
+            logger.info(f"Clicked 'Add' button after entering grade: {grade}, percentage: {percentage}")
+            
+            # Allow time for the UI to update
+            time.sleep(0.5)
+            
+            # Verify the grade was added by checking for more rows or for values in the inputs
+            new_grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
+            logger.info(f"After adding: {len(new_grade_rows)} grade rows (previously {len(grade_rows)})")
+            
+            # Take screenshot after adding grade
+            self._take_screenshot("after_adding_grade")
+            
         except NoSuchElementException as e:
-            logger.error(f"Could not find grade or percentage input in the last row: {e}")
-            logger.info(f"HTML of last row: {last_row.get_attribute('outerHTML')}")
-            self._take_screenshot("input_not_found_in_last_row")
-            self.fail(f"Input elements not found in the last row: {e}")
+            logger.error(f"Could not find input elements in the grade row: {e}")
+            self._take_screenshot("input_elements_not_found")
+            self.fail(f"Input elements not found: {e}")
             return
-        
-        # Assuming ADD_GRADE_BUTTON_SELECTOR is the button to confirm/add the currently entered grade,
-        # not necessarily the one that creates a new blank row if that's different.
-        # If the app auto-adds a new row upon filling the last one and clicking a general "add" button, this is fine.
-        add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
-
-        grade_input_element.clear()
-        grade_input_element.send_keys(str(grade))
-        percentage_input_element.clear()
-        percentage_input_element.send_keys(str(percentage))
-        
-        add_button.click() 
-        logger.info(f"Clicked 'Agregar nota' after filling grade: {grade}, percentage: {percentage} into the last available row.")
-        time.sleep(0.5) # Brief pause for UI to update, e.g., adding a new empty row
 
     def test_us04_verify_calculation_of_current_weighted_average(self):
         test_name = self._testMethodName
@@ -322,7 +400,7 @@ class US04Tests(unittest.TestCase):
                 logger.warning("CSS selector failed for back button in step 1, trying XPath with more wait time...")
                 # Take debug screenshot
                 self._take_screenshot("css_selector_failed_step1")
-                # Try a more verbose approach to locate the button
+                 # Try a more verbose approach to locate the button
                 try:
                     # First, check if there's a nav bar
                     nav_bar = self.wait_long.until(
