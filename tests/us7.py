@@ -37,7 +37,7 @@ class US07Tests(unittest.TestCase):
 
     # Placeholder for reset button - User Story 07
     # The selenium-test-dev.md does not specify a selector. Common patterns: id="reset-button", text "Reiniciar", type="reset"
-    RESET_BUTTON_SELECTOR = "button[aria-label='Reiniciar formulario de notas']" # Using aria-label for robustness
+    RESET_BUTTON_SELECTOR = "button[aria-label='Reiniciar formulario de notas']" # Using aria-label
 
     # Selectors needed for setting up scenarios (from US05, though not directly tested here)
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
@@ -284,7 +284,7 @@ class US07Tests(unittest.TestCase):
             )
             time.sleep(0.2)
             raw_text = display_element.text.strip()
-            logger.info(f"Raw current average text: '{raw_text}'")
+            logger.info(f"Raw current average text: \'{raw_text}\'") # Corrected f-string
             return raw_text
         except TimeoutException:
             logger.error(f"Timeout waiting for current average display: {self.CURRENT_AVERAGE_DISPLAY_SELECTOR}")

@@ -137,7 +137,7 @@ class US05Tests(unittest.TestCase):
                 
             # Check for impossible to approve scenario
             # In result.jsx, if requiredGrade > maxValue (5), it would display an impossible value
-            if "No es posible aprobar la materia" in raw_text or "Necesitas 11 en el" in raw_text or "Necesitas -1 en el" in raw_text:
+            if "No es posible aprobar la materia" in raw_text or "Necesitas más de 5.0" in raw_text or "Necesitas una nota mayor a 5.0" in raw_text: # Adjusted conditions
                 return "No es posible aprobar"
             
             # Try to extract the required grade

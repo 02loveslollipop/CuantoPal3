@@ -33,7 +33,7 @@ class US08Tests(unittest.TestCase):
     # Selectors for results verification (from US4, US5, US6)
     CURRENT_AVERAGE_DISPLAY_SELECTOR = "p.result__card-current"
     REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed"
-    FINAL_STATUS_DISPLAY_SELECTOR = "#final-status-display"
+    FINAL_STATUS_DISPLAY_SELECTOR = "p.result__card-final" # Corrected based on previous step for US6
 
     # Selectors needed for setting up scenarios (from US05)
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"

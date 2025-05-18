@@ -31,7 +31,7 @@ class US06Tests(unittest.TestCase):
     HOME_CONTAINER_SELECTOR = "div.home__container"
     
     # Selector for US06 - Final Estimated Status
-    FINAL_STATUS_DISPLAY_SELECTOR = "#final-status-display" # Based on selenium-test-dev.md (id="final-status-display")
+    FINAL_STATUS_DISPLAY_SELECTOR = "p.result__card-final" # Updated selector based on result.jsx (p class="result__card-final")
 
     # Selectors needed for setting up scenarios (from US05, though not directly tested here)
     REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed" 
