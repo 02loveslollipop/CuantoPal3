@@ -33,7 +33,7 @@ class US07Tests(unittest.TestCase):
     # Selectors for results verification (from US4, US5, US6)
     CURRENT_AVERAGE_DISPLAY_SELECTOR = "p.result__card-current"
     REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed"
-    FINAL_STATUS_DISPLAY_SELECTOR = "#final-status-display" # From selenium-test-dev.md
+    FINAL_STATUS_DISPLAY_SELECTOR = "p.result__card-final" # Updated for consistency
 
     # Placeholder for reset button - User Story 07
     # The selenium-test-dev.md does not specify a selector. Common patterns: id="reset-button", text "Reiniciar", type="reset"
@@ -348,7 +348,9 @@ class US07Tests(unittest.TestCase):
             
             # Verify grades were added (at least 2 filled rows + 1 template = 3, or just check count > 1)
             grade_rows_before_reset = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-            self.assertTrue(len(grade_rows_before_reset) >= 2, "Should have at least 2 grade rows after adding two grades.")
+            # Depending on app logic, after adding 2 grades, we might have 2 filled rows + 1 empty template, or just 2 rows if template is reused.
+            # Let's check that we have at least 2 rows that are presumably filled.
+            self.assertTrue(len(grade_rows_before_reset) >= 2, f"Should have at least 2 grade rows after adding two grades, found {len(grade_rows_before_reset)}.")
 
             # 2. Click calculate and observe some results (optional, but good for confirming state change)
             self._click_calculate_and_wait_for_result_page()
@@ -357,17 +359,39 @@ class US07Tests(unittest.TestCase):
             self._navigate_back_to_home()
 
             # 3. Locate and click the reset button
-            logger.info(f"Attempting to click reset button with selector: {self.RESET_BUTTON_SELECTOR}")
+            logger.info(f"Attempting to find and click reset button with selector: {self.RESET_BUTTON_SELECTOR}")
             try:
+                # First, wait for the button to be present in the DOM
+                logger.info(f"Waiting for presence of reset button: {self.RESET_BUTTON_SELECTOR}")
+                self.wait_long.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, self.RESET_BUTTON_SELECTOR))
+                )
+                logger.info(f"Reset button '{self.RESET_BUTTON_SELECTOR}' is present in the DOM.")
+                
+                # Then, wait for it to be clickable
+                logger.info(f"Waiting for reset button '{self.RESET_BUTTON_SELECTOR}' to be clickable.")
                 reset_button = self.wait_long.until(
                     EC.element_to_be_clickable((By.CSS_SELECTOR, self.RESET_BUTTON_SELECTOR))
                 )
+                logger.info(f"Reset button '{self.RESET_BUTTON_SELECTOR}' is clickable.")
                 reset_button.click()
                 logger.info("Clicked reset button.")
                 time.sleep(0.5) # Allow UI to update
-            except TimeoutException:
-                self._take_screenshot("reset_button_not_found")
-                self.fail(f"Reset button with selector '{self.RESET_BUTTON_SELECTOR}' not found or not clickable. Update selector if needed.")
+            except TimeoutException as e:
+                logger.error(f"Timeout related to reset button '{self.RESET_BUTTON_SELECTOR}'. Current URL: {self.driver.current_url}", exc_info=True)
+                # Add more debug info: check if home container is still there
+                try:
+                    home_container_present = self.driver.find_element(By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR).is_displayed()
+                    logger.info(f"Home container is present and displayed on reset button timeout: {home_container_present}")
+                except NoSuchElementException:
+                    logger.error("Home container NOT present on reset button timeout. Likely on wrong page.")
+                self._take_screenshot("reset_button_timeout")
+                self.fail(f"Reset button with selector '{self.RESET_BUTTON_SELECTOR}' not found or not clickable. Details: {e}")
+            except Exception as e_click: # Catch other exceptions during click
+                logger.error(f"Error clicking reset button '{self.RESET_BUTTON_SELECTOR}': {e_click}", exc_info=True)
+                self._take_screenshot("reset_button_click_error")
+                self.fail(f"Error clicking reset button: {e_click}")
+
 
             # 4. Verify input fields are cleared and list of added grades is cleared/reset
             # Check if the main input fields in the (usually first or only) row are empty

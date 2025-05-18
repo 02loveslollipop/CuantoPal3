@@ -251,25 +251,52 @@ class US06Tests(unittest.TestCase):
         """Extracts and returns the final estimated status message from the result page."""
         raw_text = ""
         try:
+            # Ensure on result page and container is present
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            logger.info(f"Result page container '{self.RESULT_PAGE_CONTAINER_SELECTOR}' is present.")
             
+            # Wait for the status element to be visible
             status_element = self.wait_long.until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, self.FINAL_STATUS_DISPLAY_SELECTOR))
             )
-            time.sleep(0.2) # Allow text to stabilize
+            logger.info(f"Final status element '{self.FINAL_STATUS_DISPLAY_SELECTOR}' is visible.")
+
+            # Now, wait for the text to be populated in the element
+            try:
+                WebDriverWait(self.driver, 10).until( # Increased timeout for text population
+                    lambda d: status_element.text.strip() != ""
+                )
+                logger.info(f"Text is populated in '{self.FINAL_STATUS_DISPLAY_SELECTOR}'.")
+            except TimeoutException:
+                logger.warning(f"Timed out waiting for text to be populated in {self.FINAL_STATUS_DISPLAY_SELECTOR}. Element might be visible but empty.")
+                # Attempt to take screenshot even if text doesn't populate, to see state
+                self._take_screenshot("final_status_text_empty_timeout")
+                # Proceed to get text anyway, it might have populated by now or be legitimately empty, or error will be caught by assertion
+            
             raw_text = status_element.text.strip()
             logger.info(f"Raw final status message text: '{raw_text}'")
 
             if not raw_text:
-                logger.warning("Final status message text is empty.")
-                self._take_screenshot("empty_final_status_message")
-                return "Error: Empty Value"
+                logger.warning("Final status message text is empty after being visible and waiting for text.")
+                self._take_screenshot("empty_final_status_message_after_wait")
+                # Consider if this should be an error or a specific return value
+                return "Error: Empty Value After Wait" 
             
-            # Expected values: "Aprobado", "En riesgo", "No aprueba"
             return raw_text
 
         except TimeoutException:
-            logger.error(f"Timeout waiting for final status display: {self.FINAL_STATUS_DISPLAY_SELECTOR}")
+            logger.error(f"Timeout waiting for final status display '{self.FINAL_STATUS_DISPLAY_SELECTOR}' or its content.")
+            current_url = "unknown"
+            page_source_snippet = "unknown"
+            try:
+                current_url = self.driver.current_url
+                # page_source = self.driver.page_source
+                # page_source_snippet = page_source[:1500] # Log more chars
+            except Exception as e_url:
+                logger.error(f"Could not get current URL or page source on timeout: {e_url}")
+
+            logger.error(f"Current URL on timeout: {current_url}")
+            # logger.debug(f"Page source snippet on timeout: {page_source_snippet}")
             self._take_screenshot("final_status_timeout")
             return "Error: Timeout"
         except Exception as e:
