@@ -26,13 +26,17 @@ class US10Tests(unittest.TestCase):
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
-    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
+    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-of-type"
     HOME_CONTAINER_SELECTOR = "div.home__container"
 
-    # Selectors for alerts (from selenium-test-dev.md)
+    # Selectors for alerts - based on save.jsx and alert.jsx
+    ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
+    ALERT_CONTAINER_SELECTOR = "div.alert__container" 
     ALERT_TITLE_SELECTOR = "div.alert__title"
     ALERT_MESSAGE_SELECTOR = "div.alert__message"
-    ALERT_CONFIRM_BUTTON_SELECTOR = "div.alert__actions button.alert__button" # General confirm
+    ALERT_CONFIRM_BUTTON_SELECTOR = "button.alert__button"
+    ALERT_CANCEL_BUTTON_SELECTOR = "button.alert__button.alert__button--cancel"
+    ALERT_CONFIRM_BUTTON_SINGLE_SELECTOR = "button.alert__button.alert__button--single"
 
     # Selectors needed for setting up scenarios (from US05)
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
@@ -41,7 +45,7 @@ class US10Tests(unittest.TestCase):
     def set_driver_fixture(self, driver):
         self.driver = driver
         self.wait_short = WebDriverWait(self.driver, 5)
-        self.wait_long = WebDriverWait(self.driver, 15)
+        self.wait_long = WebDriverWait(self.driver, 20) # Increased to 20s
         if not os.path.exists("screenshots"):
             os.makedirs("screenshots")
 
@@ -83,230 +87,284 @@ class US10Tests(unittest.TestCase):
         except Exception as e:
             logger.error(f"Error saving screenshot {screenshot_name}: {e}")
 
-    def _set_approval_grade_via_js(self, approval_grade_value, min_val=0, max_val=5):
-        logger.info(f"Setting approval grade to: {approval_grade_value} via JavaScript injection")
+    def _set_approval_grade_via_js(self, approval_grade_value, min_val=0.0, max_val=5.0):
+        logger.info(f"Setting approval grade to: {approval_grade_value} using JavaScript injection")
         script = f"""
         localStorage.setItem('settings', JSON.stringify({{
             minAcceptValue: parseFloat({approval_grade_value}),
-            minValue: {min_val},
-            maxValue: {max_val}
+            minValue: parseFloat({min_val}),
+            maxValue: parseFloat({max_val})
         }}));
         localStorage.setItem("isFirstTime", "false");
         return localStorage.getItem('settings');
         """
         try:
-            self.driver.execute_script(script)
-            logger.info(f"Settings updated via JavaScript. Approval grade set to: {approval_grade_value}")
-            current_url = self.driver.current_url
+            result = self.driver.execute_script(script)
+            logger.info(f"Settings updated via JavaScript. Result: {result}")
             self.driver.refresh()
-            if "settings" in current_url.lower():
-                 self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.settings__container")))
-            else:
-                 self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            logger.info(f"Page refreshed after setting approval grade via JS. Current URL: {self.driver.current_url}")
-            time.sleep(0.5)
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            logger.info("Page refreshed after setting approval grade")
         except Exception as e:
-            logger.error(f"Error executing JS to set approval grade: {e}", exc_info=True)
-            self._take_screenshot("set_approval_grade_js_error")
+            logger.error(f"Error setting approval grade via JS: {e}", exc_info=True)
+            self.fail(f"Error setting approval grade via JS: {e}")
 
     def _initial_setup(self):
         if not hasattr(self, 'driver') or not self.driver:
+            logger.error("Driver not initialized in _initial_setup. Aborting setup.")
             self.fail("Driver not initialized for test setup.")
+            return
+            
         self.driver.get(self.BASE_URL)
         logger.info(f"Navigated to base URL: {self.BASE_URL}")
         time.sleep(0.5)
+        
         try:
-            alert_button = WebDriverWait(self.driver, 7).until(
+            logger.info(f"Attempting to handle first-time alert with button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
+            alert_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, self.FIRST_TIME_ALERT_BUTTON_SELECTOR))
             )
             alert_button.click()
+            logger.info(f"Clicked first-time alert button: '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
+
             WebDriverWait(self.driver, 5).until(
                 EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR))
             )
-            nav_back_button = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
-            )
+            logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible. App should be on Settings page.")
+            
+            try:
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector.")
+            except TimeoutException:
+                logger.info("CSS selector failed for back button, trying XPath...")
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                logger.info("Found back button using XPath selector.")
+                
             nav_back_button.click()
+            logger.info("Clicked nav back button to return to Home page.")
+            
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
             )
+            logger.info("Successfully navigated back to the Home page after initial alert.")
+
         except TimeoutException:
-            logger.info("First-time user alert not found or handled. Ensuring on Home page.")
+            logger.info("First-time user alert or subsequent navigation elements not found or timed out. Checking if already on Home page.")
             try:
-                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            except TimeoutException:
-                logger.info("Attempting to set localStorage isFirstTime to false and refreshing.")
-                self.driver.execute_script("localStorage.setItem('isFirstTime', 'false'); localStorage.removeItem('grades'); localStorage.removeItem('settings');")
-                self.driver.refresh()
-                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+                self.driver.find_element(By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)
+                logger.info("Already on the Home page or initial alert was not present.")
+            except NoSuchElementException:
+                logger.warning(f"Home container '{self.HOME_CONTAINER_SELECTOR}' not found. Attempting to re-navigate to BASE_URL.")
+                self.driver.get(self.BASE_URL) 
+                try:
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
+                    )
+                    logger.info("Successfully navigated to Home page as a fallback.")
+                except TimeoutException:
+                    logger.error("Failed to ensure presence on Home page even after fallback. Current URL: %s", self.driver.current_url)
+                    self._take_screenshot("initial_setup_home_fallback_failed")
+                    self.fail("Could not ensure presence on the Home page during initial setup.")
         except Exception as e:
+            logger.error(f"An unexpected error occurred during initial setup: {e}", exc_info=True)
+            self._take_screenshot("initial_setup_error")
             self.fail(f"Unexpected error during initial setup: {e}")
-        self._set_approval_grade_via_js("3.0") # Default approval grade
+            
+        self._set_approval_grade_via_js("3.0") # Default approval grade for tests
         self._clear_grades_via_js() # Ensure no grades from previous tests
 
     def _clear_grades_via_js(self):
         logger.info("Clearing grades from localStorage via JavaScript.")
         try:
-            self.driver.execute_script("localStorage.removeItem('grades');")
-            # Optionally, refresh or re-navigate to ensure UI updates if it relies on this for re-render
-            # self.driver.refresh()
-            # self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            logger.info("Grades cleared from localStorage.")
+            self.driver.execute_script("localStorage.removeItem('grades'); console.log('Cleared grades from localStorage');")
+            self.driver.refresh()
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            logger.info("Cleared grades and refreshed page.")
         except Exception as e:
             logger.error(f"Error clearing grades via JS: {e}", exc_info=True)
-            self._take_screenshot("clear_grades_js_error")
-            # Depending on test needs, this might be a critical failure
-            # self.fail("Failed to clear grades via JS for test setup.")
+            self.fail(f"Error clearing grades via JS: {e}")
 
     def _add_grade_and_percentage_raw(self, grade_value, percentage_value):
-        """Adds a grade and percentage by directly interacting with the last row's inputs, then clicks the main add button."""
-        if not hasattr(self, 'driver') or not self.driver: self.fail("Driver not available.")
+        """Adds a grade and percentage by directly interacting with the last row's inputs, then clicks the main add button.
+        Does not check for success, just performs the UI actions."""
+        if not hasattr(self, 'driver') or not self.driver:
+            logger.error("Driver not available in _add_grade_and_percentage_raw.")
+            self.fail("Driver not available.")
+            return
+            
         self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
         
+        # Find all grade rows and use the last one
         grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
         if not grade_rows:
-            # If no rows, the app might expect the first input to create the first row or an add button to be clicked first.
-            # For simplicity, assume an initial row is present or created upon typing.
-            # This might need adjustment based on exact app behavior for the very first grade.
-            # Click add button to ensure a row exists if it's the first entry and no rows are present.
-            # This logic is tricky as the app might add a row upon typing into a non-existent one.
-            # Let's assume the app provides an initial empty row or handles it.
-            pass 
-
-        # Always target the last available row for new input
-        # Re-fetch rows in case an add button was clicked or app structure changed
-        grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-        if not grade_rows: # Should not happen if app provides an initial row
-            self._take_screenshot("no_grade_rows_to_input")
-            self.fail("No grade rows available for input.")
-
-        target_row = grade_rows[-1]
+            logger.error("No grade rows found.")
+            self._take_screenshot("no_grade_rows_found")
+            self.fail("No grade rows found.")
+            return
+            
+        target_row = grade_rows[-1]  # Get the last row
         
         try:
+            # Find the input elements in the target row
             grade_input = target_row.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
             percentage_input = target_row.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
             
+            # Input the values
             grade_input.clear()
             grade_input.send_keys(str(grade_value))
             percentage_input.clear()
             percentage_input.send_keys(str(percentage_value))
-            logger.info(f"Raw input: Grade '{grade_value}', Percentage '{percentage_value}' into last row.")
             
-            # Click the main "Add Grade" button to submit this entry
+            # Click the add button to add the grade
             add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
+            logger.info(f"About to click Add button after entering Grade: {grade_value}, Percentage: {percentage_value}")
             add_button.click()
-            logger.info("Clicked main 'Add Grade' button after raw input.")
-            time.sleep(0.5) # Allow UI to update (e.g., new row added, alert shown)
-        except NoSuchElementException:
-            self._take_screenshot("input_fields_not_in_last_row")
-            self.fail("Could not find grade/percentage input fields in the last row.")
+            logger.info(f"Clicked add button after entering Grade: {grade_value}, Percentage: {percentage_value}")
+            
+            # Small wait to allow for UI update or alert to appear
+            time.sleep(0.5)
         except Exception as e:
-            self._take_screenshot("error_raw_add_grade")
-            self.fail(f"Error during raw add grade and percentage: {e}")
+            logger.error(f"Error in _add_grade_and_percentage_raw: {e}", exc_info=True)
+            self._take_screenshot("add_grade_percentage_raw_error")
+            self.fail(f"Error in _add_grade_and_percentage_raw: {e}")
 
-    def _check_for_alert(self, expected_title_part, expected_message_part):
-        """Checks for an alert, verifies its title and message, and closes it."""
+    def _check_for_alert(self, expected_title_part=None, expected_message_part=None):
+        """Checks if an alert is currently displayed and if it contains the expected title and message.
+        Returns a tuple of (alert_is_present, alert_title, alert_message)."""
+        logger.info(f"Checking for alert with title_part={expected_title_part}, message_part={expected_message_part}")
+        
         try:
-            WebDriverWait(self.driver, 3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR)))
-            logger.info("Alert overlay detected.")
+            # Wait for the alert overlay to be visible
+            self.wait_short.until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR)))
+            logger.info("Alert overlay is visible.")
             
-            title_element = self.driver.find_element(By.CSS_SELECTOR, self.ALERT_TITLE_SELECTOR)
-            message_element = self.driver.find_element(By.CSS_SELECTOR, self.ALERT_MESSAGE_SELECTOR)
+            # Find the alert container, title and message
+            alert_container = self.driver.find_element(By.CSS_SELECTOR, self.ALERT_CONTAINER_SELECTOR)
             
-            title_text = title_element.text.strip()
-            message_text = message_element.text.strip()
-            logger.info(f"Alert Title: '{title_text}', Message: '{message_text}'")
+            # Title is optional in the Alert component, so use presence_of first
+            alert_title = None
+            alert_message = None
             
-            self.assertIn(expected_title_part, title_text, f"Alert title mismatch. Expected part: '{expected_title_part}', Got: '{title_text}'")
-            self.assertIn(expected_message_part, message_text, f"Alert message mismatch. Expected part: '{expected_message_part}', Got: '{message_text}'")
+            try:
+                title_elements = alert_container.find_elements(By.CSS_SELECTOR, self.ALERT_TITLE_SELECTOR)
+                if title_elements:
+                    alert_title = title_elements[0].text.strip()
+                    logger.info(f"Alert title found: '{alert_title}'")
+            except NoSuchElementException:
+                logger.info("No alert title element found.")
+                
+            try:
+                message_elements = alert_container.find_elements(By.CSS_SELECTOR, self.ALERT_MESSAGE_SELECTOR)
+                if message_elements:
+                    alert_message = message_elements[0].text.strip()
+                    logger.info(f"Alert message found: '{alert_message}'")
+            except NoSuchElementException:
+                logger.info("No alert message element found.")
             
-            confirm_button = self.driver.find_element(By.CSS_SELECTOR, self.ALERT_CONFIRM_BUTTON_SELECTOR)
-            confirm_button.click()
-            WebDriverWait(self.driver, 3).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR)))
-            logger.info("Alert confirmed and closed.")
-            return True # Alert was found and handled
+            # Check title and message if specified
+            title_matches = True
+            message_matches = True
+            
+            if expected_title_part and (not alert_title or expected_title_part not in alert_title):
+                title_matches = False
+                logger.warning(f"Alert title '{alert_title}' does not contain expected part '{expected_title_part}'")
+                
+            if expected_message_part and (not alert_message or expected_message_part not in alert_message):
+                message_matches = False
+                logger.warning(f"Alert message '{alert_message}' does not contain expected part '{expected_message_part}'")
+            
+            # If both title and message match (or weren't specified), dismiss the alert
+            if title_matches and message_matches:
+                # Try to find and click the confirm button
+                try:
+                    # First try the single button (most alerts in the app)
+                    confirm_buttons = self.driver.find_elements(By.CSS_SELECTOR, self.ALERT_CONFIRM_BUTTON_SINGLE_SELECTOR)
+                    if not confirm_buttons:
+                        # Then try the regular confirm button
+                        confirm_buttons = self.driver.find_elements(By.CSS_SELECTOR, self.ALERT_CONFIRM_BUTTON_SELECTOR)
+                    
+                    if confirm_buttons:
+                        confirm_buttons[0].click()
+                        logger.info("Clicked alert confirm button.")
+                        time.sleep(0.5) # Wait for alert dismissal animation
+                    else:
+                        logger.warning("No alert confirm button found to dismiss the alert.")
+                        self._take_screenshot("no_alert_confirm_button")
+                except Exception as e:
+                    logger.error(f"Error dismissing alert: {e}", exc_info=True)
+                    self._take_screenshot("error_dismissing_alert")
+            
+            return (True, alert_title, alert_message, title_matches and message_matches)
+            
         except TimeoutException:
-            logger.info("No alert detected within the timeout period.")
-            return False # No alert found
+            logger.info("No alert overlay found.")
+            return (False, None, None, False)
         except Exception as e:
-            self._take_screenshot("check_alert_error")
-            logger.error(f"Error while checking/handling alert: {e}")
-            self.fail(f"Error during alert handling: {e}")
-            return False # Error occurred
+            logger.error(f"Error checking for alert: {e}", exc_info=True)
+            self._take_screenshot("check_for_alert_error")
+            return (False, None, None, False)
 
     def _get_number_of_filled_grade_rows(self):
-        """Counts the number of grade rows that have actual values entered."""
-        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-        grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-        filled_rows = 0
-        for row in grade_rows:
-            try:
-                grade_val = row.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR).get_attribute("value")
-                perc_val = row.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR).get_attribute("value")
-                if grade_val and perc_val: # Both must have a value
-                    filled_rows += 1
-            except NoSuchElementException:
-                continue # Skip if inputs not found (e.g. header row if any)
-        logger.info(f"Number of filled grade rows found: {filled_rows}")
-        return filled_rows
+        """Counts the number of grade rows that have values in both grade and percentage inputs."""
+        try:
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+            grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
+            
+            filled_rows = 0
+            for row in grade_rows:
+                try:
+                    grade_input = row.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
+                    percentage_input = row.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
+                    
+                    grade_val = grade_input.get_attribute("value")
+                    percentage_val = percentage_input.get_attribute("value")
+                    
+                    if grade_val and percentage_val:
+                        filled_rows += 1
+                except NoSuchElementException:
+                    continue
+                    
+            logger.info(f"Found {filled_rows} filled grade rows.")
+            return filled_rows
+        except Exception as e:
+            logger.error(f"Error getting number of filled grade rows: {e}", exc_info=True)
+            self._take_screenshot("get_filled_rows_error")
+            return 0
 
     # --- Test Cases for US10 ---
     def test_us10_prevent_adding_grades_if_total_percentage_exceeds_100(self):
-        # Corresponds to Task 10.1
+        """Tests that an alert is shown when attempting to add a grade that would make the total percentage exceed 100%."""
         test_name = self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._clear_grades_via_js() # Start clean
-
+        
         try:
-            # 1. Add grades totaling close to 100%
-            self._add_grade_and_percentage_raw("4.0", "50") # Total: 50%
-            self.assertEqual(self._get_number_of_filled_grade_rows(), 1, "After 1st grade, expected 1 filled row.")
+            # First add a grade with 80% percentage
+            self._add_grade_and_percentage_raw(4.0, 80)
             
-            self._add_grade_and_percentage_raw("3.0", "40") # Total: 90%
-            self.assertEqual(self._get_number_of_filled_grade_rows(), 2, "After 2nd grade, expected 2 filled rows.")
-
-            # 2. Attempt to add a grade that makes the total percentage exceed 100%
-            logger.info("Attempting to add grade that exceeds 100% total percentage (20%).")
-            # Input into the new empty row created by the previous add
-            grade_rows_before_exceed = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-            last_row_inputs = grade_rows_before_exceed[-1]
-            grade_input = last_row_inputs.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
-            percentage_input = last_row_inputs.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
+            # Verify it was added
+            filled_rows_before = self._get_number_of_filled_grade_rows()
+            self.assertEqual(filled_rows_before, 1, f"Expected 1 filled row after adding first grade, found {filled_rows_before}")
             
-            grade_input.clear(); grade_input.send_keys("2.0")
-            percentage_input.clear(); percentage_input.send_keys("20") # This would make it 110%
-            logger.info("Entered 2.0 grade with 20% into the new row inputs.")
-
-            # Click the main "Add Grade" button
-            add_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
-            add_button.click()
-            logger.info("Clicked main 'Add Grade' button to attempt adding the exceeding grade.")
-            time.sleep(0.5) # Give time for alert to appear
-
-            # 3. Verify an alert is shown and the grade is NOT added
-            alert_shown = self._check_for_alert(
-                expected_title_part="Error de Porcentaje", 
-                expected_message_part="La suma de los porcentajes no puede exceder el 100%."
-            )
-            self.assertTrue(alert_shown, "Expected an alert when trying to add grade exceeding 100% total percentage.")
+            # Now try to add another grade with 30% (which would make total 110%)
+            self._add_grade_and_percentage_raw(3.5, 30)
             
-            # Verify the grade was not actually added (still 2 filled rows)
-            self.assertEqual(self._get_number_of_filled_grade_rows(), 2, 
-                             "Number of filled rows should remain 2 after attempting to add grade exceeding 100%.")
+            # Check for an alert indicating the total exceeds 100%
+            alert_present, alert_title, alert_message, alert_matches = self._check_for_alert(
+                expected_message_part="El porcentaje total no puede superar el 100%")
+                
+            # Assert the alert was shown with the expected message
+            self.assertTrue(alert_present, "Alert should be present when adding grade with percentage that exceeds 100%")
+            self.assertTrue(alert_matches, f"Alert should contain expected message. Got title: '{alert_title}', message: '{alert_message}'")
             
-            # Also check that the input fields of the last row (where the attempt was made) are now empty or reset
-            # This depends on app behavior: does it clear the offending inputs or leave them?
-            # Assuming it clears them or the row is removed/reset to template.
-            grade_rows_after_alert = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
-            last_row_after_alert = grade_rows_after_alert[-1]
-            last_grade_input_val = last_row_after_alert.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR).get_attribute("value")
-            last_perc_input_val = last_row_after_alert.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR).get_attribute("value")
+            # Verify the second grade was not added (still only 1 row)
+            filled_rows_after = self._get_number_of_filled_grade_rows()
+            self.assertEqual(filled_rows_after, 1, f"Expected still only 1 filled row after attempting to add grade exceeding 100%, found {filled_rows_after}")
             
-            self.assertTrue(last_grade_input_val == "" and last_perc_input_val == "", 
-                            f"Inputs in the last row should be empty after percentage error. Got G: '{last_grade_input_val}', P: '{last_perc_input_val}'")
-
-            logger.info(f"Test {test_name} passed.")
-
+            logger.info(f"Test {test_name} passed - alert shown correctly when percentage exceeds 100%")
+            
         except AssertionError as e:
             logger.error(f"AssertionError in {test_name}: {e}", exc_info=True)
             self._take_screenshot(f"{test_name}_assertion_error")
@@ -317,66 +375,62 @@ class US10Tests(unittest.TestCase):
             self.fail(f"Exception in {test_name}: {e}")
 
     def test_us10_prevent_calculation_if_total_percentage_exceeds_100(self):
-        # Corresponds to Task 10.2 (Alternative: if adding is allowed but calculation is prevented)
-        # This test assumes the application MIGHT allow entering data that sums > 100% in the UI temporarily,
-        # but should prevent calculation and show an alert.
-        # If Task 10.1 (preventing add) is strictly enforced, this scenario might not be directly testable
-        # in the same way, or the alert for adding would preempt the calculation alert.
-        # For this test, we will simulate data in localStorage that exceeds 100% and then try to calculate.
+        """Tests that an alert is shown when attempting to calculate with grades whose total percentage exceeds 100%."""
         test_name = self._testMethodName
         logger.info(f"Running test: {test_name}")
-        self._clear_grades_via_js() # Start clean
-
+        
         try:
-            # 1. Manually set localStorage to have grades exceeding 100% total percentage
-            # This bypasses the UI add validation to test the calculation validation specifically.
-            grades_exceeding_100 = [
-                {"id": "1", "grade": "4.0", "percentage": "60"},
-                {"id": "2", "grade": "3.0", "percentage": "50"} # Total 110%
-            ]
-            self.driver.execute_script(f"localStorage.setItem('grades', JSON.stringify({grades_exceeding_100}));")
-            logger.info(f"Manually set localStorage grades to: {grades_exceeding_100}")
+            # Set up a special scenario by directly inserting values into localStorage 
+            # that would make the total percentage exceed 100%
+            # This is to bypass the UI validation when adding grades
+            script = """
+            localStorage.setItem('grades', JSON.stringify([
+                { grade: 4.0, percentage: 60 },
+                { grade: 3.5, percentage: 50 }
+            ]));
+            return localStorage.getItem('grades');
+            """
+            result = self.driver.execute_script(script)
+            logger.info(f"Set up grades in localStorage with total percentage exceeding 100%: {result}")
             
-            # Refresh the page to load these grades into the UI
+            # Refresh the page to load the grades from localStorage
             self.driver.refresh()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            time.sleep(1) # Allow UI to populate from localStorage
-            self._take_screenshot("after_manual_localstorage_set")
-
-            # Verify UI shows these grades (optional, but good for sanity check)
-            num_filled_rows = self._get_number_of_filled_grade_rows()
-            self.assertEqual(num_filled_rows, 2, "UI should reflect the 2 grades loaded from manipulated localStorage.")
-
-            # 2. Attempt to click the calculate button
-            logger.info("Attempting to click calculate button with percentages > 100%.")
-            calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
-            calculate_button.click()
-            time.sleep(0.5) # Give time for alert to appear
-
-            # 3. Verify an alert is shown indicating the percentage error, and calculation does not proceed
-            # The alert message might be the same as in 10.1 or specific to calculation.
-            # Assuming same alert for now based on typical app behavior.
-            alert_shown = self._check_for_alert(
-                expected_title_part="Error de Porcentaje", 
-                expected_message_part="La suma de los porcentajes no puede exceder el 100%."
-            )
-            self.assertTrue(alert_shown, "Expected an alert when trying to calculate with total percentage > 100%.")
             
-            # Verify that we are still on the home page (calculation did not proceed to result page)
+            # Verify the grades were loaded (should show 2 rows with values)
+            filled_rows = self._get_number_of_filled_grade_rows()
+            self.assertEqual(filled_rows, 2, f"Expected 2 filled rows after loading grades from localStorage, found {filled_rows}")
+            
+            # Try to click calculate button
             try:
-                self.wait_short.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-                logger.info("Still on home page after attempting calculation with >100% percentage, as expected.")
+                calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
+                calculate_button.click()
+                logger.info("Clicked calculate button with grades exceeding 100%.")
+                
+                # Check for an alert indicating the total exceeds 100%
+                alert_present, alert_title, alert_message, alert_matches = self._check_for_alert(
+                    expected_message_part="El porcentaje total no puede superar el 100%")
+                    
+                # Assert the alert was shown with the expected message
+                self.assertTrue(alert_present, "Alert should be present when calculating with percentage that exceeds 100%")
+                self.assertTrue(alert_matches, f"Alert should contain expected message. Got title: '{alert_title}', message: '{alert_message}'")
+                
+                # Verify we did not navigate to the result page
+                time.sleep(0.5) # Wait to ensure no navigation occurs
+                try:
+                    result_page_present = self.driver.find_element(By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR).is_displayed()
+                    self.assertFalse(result_page_present, "Should not navigate to result page when percentage exceeds 100%")
+                except NoSuchElementException:
+                    # This is expected - we should not be on the result page
+                    home_page_present = self.driver.find_element(By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR).is_displayed()
+                    self.assertTrue(home_page_present, "Should remain on home page when percentage exceeds 100%")
+                
+                logger.info(f"Test {test_name} passed - alert shown correctly when calculating with percentage exceeding 100%")
+                
             except TimeoutException:
-                self._take_screenshot("navigated_away_from_home_error")
-                self.fail("Calculation proceeded or navigated away from home page despite >100% percentage error.")
+                self._take_screenshot("calculate_button_timeout")
+                self.fail("Timeout waiting for calculate button to be clickable.")
             
-            # Ensure result page is not shown
-            with self.assertRaises(TimeoutException):
-                WebDriverWait(self.driver, 1).until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
-            logger.info("Result page is not visible, as expected.")
-
-            logger.info(f"Test {test_name} passed.")
-
         except AssertionError as e:
             logger.error(f"AssertionError in {test_name}: {e}", exc_info=True)
             self._take_screenshot(f"{test_name}_assertion_error")

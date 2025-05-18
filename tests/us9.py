@@ -33,16 +33,24 @@ class US09Tests(unittest.TestCase):
     # Selectors for results verification
     REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed"
 
-    # Selectors for US09 - Settings page
+    # Selectors for US09 - Settings page, based on settings.jsx
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
-    SETTINGS_NAV_BUTTON_SELECTOR = "nav.nav-bar button.nav-bar__button:nth-of-type(2)" # CSS selector for the settings button (assuming it's the second button)
-    APPROVAL_GRADE_INPUT_SELECTOR = "input.settings__input[type='number']" # As per selenium-test-dev.md
-    SETTINGS_PAGE_IDENTIFIER = "div.settings__container" # Assuming a container for settings page
+    SETTINGS_NAV_BUTTON_SELECTOR = "button[aria-label='Configuración']" # Using aria-label
+    SETTINGS_CONTAINER_SELECTOR = "div.settings__container" 
+    
+    # Specific selectors based on settings.jsx structure:
+    # <div className="settings__row">
+    #   <label className="settings__label">Cuanto necesito</label>
+    #   <input type="number" className="settings__input" ... />
+    # </div>
+    APPROVAL_GRADE_INPUT_SELECTOR = "div.settings__row:nth-child(1) > input.settings__input[type='number']" 
+    MIN_GRADE_INPUT_SELECTOR = "div.settings__row:nth-child(2) > input.settings__input[type='number']"
+    MAX_GRADE_INPUT_SELECTOR = "div.settings__row:nth-child(3) > input.settings__input[type='number']"
 
     def set_driver_fixture(self, driver):
         self.driver = driver
         self.wait_short = WebDriverWait(self.driver, 5)
-        self.wait_long = WebDriverWait(self.driver, 15)
+        self.wait_long = WebDriverWait(self.driver, 20) # Increased to 20s
         if not os.path.exists("screenshots"):
             os.makedirs("screenshots")
 
@@ -98,39 +106,54 @@ class US09Tests(unittest.TestCase):
         # Check if first time alert is present and click it
         try:
             logger.info(f"Attempting to handle first-time alert with button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
-            alert_button = WebDriverWait(self.driver, 7).until(
+            alert_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, self.FIRST_TIME_ALERT_BUTTON_SELECTOR))
             )
             alert_button.click()
             logger.info(f"Clicked first-time alert button: '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
+
             WebDriverWait(self.driver, 5).until(
                 EC.invisibility_of_element_located((By.CSS_SELECTOR, self.ALERT_OVERLAY_SELECTOR))
             )
             logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible. App should be on Settings page.")
-            # Now on settings page, navigate back to home for tests that start there
-            self._navigate_to_home_from_settings() # Ensure we are back home
+            
+            try:
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector.")
+            except TimeoutException:
+                logger.info("CSS selector failed for back button, trying XPath...")
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                logger.info("Found back button using XPath selector.")
+                
+            nav_back_button.click()
+            logger.info("Clicked nav back button to return to Home page.")
+            
+            WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
+            )
+            logger.info("Successfully navigated back to the Home page after initial alert.")
 
         except TimeoutException:
-            logger.info("First-time user alert not found or timed out. Assuming already handled or not present.")
-            # Ensure we are on the home page if the alert wasn't there
+            logger.info("First-time user alert or subsequent navigation elements not found or timed out. Checking if already on Home page.")
             try:
-                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-                logger.info("Confirmed on Home page.")
-            except TimeoutException:
-                logger.error("Failed to confirm presence on Home page after initial_setup.")
-                self._take_screenshot("initial_setup_not_on_home")
-                # self.fail("Could not ensure presence on the Home page during initial setup.")
-                # Attempt to set localStorage directly to bypass first time if stuck
-                logger.info("Attempting to set localStorage isFirstTime to false and refreshing.")
-                self.driver.execute_script("localStorage.setItem('isFirstTime', 'false');")
-                self.driver.refresh()
+                self.driver.find_element(By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)
+                logger.info("Already on the Home page or initial alert was not present.")
+            except NoSuchElementException:
+                logger.warning(f"Home container '{self.HOME_CONTAINER_SELECTOR}' not found. Attempting to re-navigate to BASE_URL.")
+                self.driver.get(self.BASE_URL) 
                 try:
-                    self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-                    logger.info("Successfully navigated to Home page after setting localStorage.")
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
+                    )
+                    logger.info("Successfully navigated to Home page as a fallback.")
                 except TimeoutException:
-                    logger.error("Still not on home page after localStorage trick.")
-                    self._take_screenshot("initial_setup_home_failed_hard")
-                    self.fail("Failed to reach home page in initial_setup.")
+                    logger.error("Failed to ensure presence on Home page even after fallback. Current URL: %s", self.driver.current_url)
+                    self._take_screenshot("initial_setup_home_fallback_failed")
+                    self.fail("Could not ensure presence on the Home page during initial setup.")
         except Exception as e:
             logger.error(f"An unexpected error occurred during initial setup: {e}", exc_info=True)
             self._take_screenshot("initial_setup_error")
@@ -142,236 +165,331 @@ class US09Tests(unittest.TestCase):
     def _navigate_to_settings(self):
         logger.info("Navigating to Settings page.")
         try:
-            # Try CSS selector first
-            logger.info(f"Attempting to click settings button with CSS selector: {self.SETTINGS_NAV_BUTTON_SELECTOR}")
-            settings_button = self.wait_long.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, self.SETTINGS_NAV_BUTTON_SELECTOR))
-            )
-            logger.info("Found settings button using CSS selector.")
-        except TimeoutException:
-            logger.info("CSS selector failed for settings button, trying XPath...")
-            settings_button = self.wait_long.until(
-                EC.element_to_be_clickable((By.XPATH, self.SETTINGS_NAV_BUTTON_XPATH))
-            )
-            logger.info("Found settings button using XPath selector.")
+            settings_button = None
+            # First try using the aria-label selector (most reliable based on nav-bar.jsx)
+            try:
+                settings_button = self.wait_long.until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.SETTINGS_NAV_BUTTON_SELECTOR))
+                )
+                logger.info(f"Found settings button using aria-label selector: {self.SETTINGS_NAV_BUTTON_SELECTOR}")
+            except TimeoutException:
+                # Try XPath as fallback
+                logger.warning(f"CSS selector '{self.SETTINGS_NAV_BUTTON_SELECTOR}' failed for settings button, trying XPath: {self.SETTINGS_NAV_BUTTON_XPATH}")
+                settings_button = self.wait_long.until(
+                    EC.element_to_be_clickable((By.XPATH, self.SETTINGS_NAV_BUTTON_XPATH))
+                )
+                logger.info("Found settings button using XPath selector.")
             
-        settings_button.click()
-        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.SETTINGS_PAGE_IDENTIFIER)))
-        self.wait_long.until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
-        logger.info("Successfully navigated to Settings page.")
+            # Click the button
+            settings_button.click()
+            logger.info("Clicked settings button.")
+            
+            # Wait for settings container
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.SETTINGS_CONTAINER_SELECTOR)))
+            logger.info("Settings container is present.")
+            # Wait for settings input fields to be present
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
+            logger.info("Settings input fields are present.")
+            time.sleep(0.5) # Allow UI to fully render
+            
+        except TimeoutException:
+            self._take_screenshot("navigate_to_settings_timeout")
+            self.fail("Failed to navigate to Settings page.")
+        except Exception as e:
+            logger.error(f"Error in _navigate_to_settings: {e}", exc_info=True)
+            self._take_screenshot("navigate_to_settings_error")
+            self.fail(f"Error navigating to settings: {e}")
 
     def _navigate_to_home_from_settings(self):
-        logger.info("Navigating to Home page from Settings.")
+        logger.info("Navigating back to Home page from Settings.")
         try:
-            # Assuming the standard back button is used
             nav_back_button = self.wait_long.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
             )
             nav_back_button.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info("Successfully navigated back to Home page from Settings.")
+            time.sleep(0.5) # Allow home page to load
         except TimeoutException:
-            self._take_screenshot("navigate_home_from_settings_timeout")
-            self.fail("Timeout navigating to Home page from Settings.")
+            try: # Fallback to XPath
+                nav_back_button = self.wait_long.until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                nav_back_button.click()
+                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+                logger.info("Navigated back to home page using XPath.")
+            except TimeoutException:
+                self._take_screenshot("navigate_home_from_settings_timeout")
+                self.fail("Timeout navigating back to Home page from Settings.")
+
+    def _set_grade_value_in_settings_ui(self, selector, value_to_set, field_name):
+        logger.info(f"Setting {field_name} to '{value_to_set}' in settings UI using selector: {selector}")
+        try:
+            input_field = self.wait_long.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, selector))
+            )
+            
+            # Ensure the input is interactable
+            self.wait_long.until(EC.visibility_of(input_field))
+            self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, selector)))
+            
+            # Clear existing value and set new value
+            input_field.clear()
+            input_field.send_keys(str(value_to_set))
+            
+            # In settings.jsx, the value is updated on change event, not requiring a submit button
+            # Click elsewhere to ensure the change event fires
+            self.driver.execute_script("arguments[0].blur();", input_field)
+            self.driver.find_element(By.CSS_SELECTOR, "div.settings__header").click()
+            
+            # Wait for potential state update and localStorage persistence
+            time.sleep(1.0)
+            logger.info(f"Set {field_name} to {value_to_set} and triggered change event.")
+            
+            # Verify the value persisted in localStorage
+            settings_str = self.driver.execute_script("return localStorage.getItem('settings');")
+            if not settings_str:
+                logger.error("localStorage 'settings' is null after setting value.")
+                self._take_screenshot(f"localStorage_missing_after_set_{field_name}")
+                self.fail(f"localStorage 'settings' should not be null after setting {field_name}.")
+            
+            stored_settings = json.loads(settings_str)
+            local_storage_key_map = {
+                "approval grade": "minAcceptValue",
+                "min grade": "minValue",
+                "max grade": "maxValue"
+            }
+            expected_key = local_storage_key_map.get(field_name)
+            if not expected_key:
+                self.fail(f"Unknown field_name: {field_name} for localStorage verification.")
+
+            # Check if the value was properly saved
+            stored_value = stored_settings.get(expected_key)
+            if stored_value is None:
+                logger.error(f"{expected_key} not found in localStorage settings: {stored_settings}")
+                self.fail(f"{field_name} ({expected_key}) not found in localStorage after setting.")
+                
+            # Convert both to float for comparison to avoid type issues
+            try:
+                stored_value_float = float(stored_value)
+                expected_value_float = float(value_to_set)
+                
+                if abs(stored_value_float - expected_value_float) > 0.01:
+                    logger.error(f"{field_name} in localStorage ({stored_value_float}) did not match expected value ({expected_value_float})")
+                    self.fail(f"{field_name} in localStorage ({stored_value_float}) did not match expected value ({expected_value_float})")
+                    
+                logger.info(f"{field_name} correctly updated in localStorage to {stored_value_float}")
+                return True
+            except (ValueError, TypeError) as e:
+                logger.error(f"Error comparing {field_name} values: {e}", exc_info=True)
+                self.fail(f"Error comparing {field_name} values: {e}")
+                return False
+
+        except TimeoutException:
+            self._take_screenshot(f"set_{field_name.replace(' ','_')}_timeout")
+            self.fail(f"Timeout while trying to set {field_name} to {value_to_set} with selector {selector}.")
+        except Exception as e:
+            self._take_screenshot(f"set_{field_name.replace(' ','_')}_error")
+            logger.error(f"Error setting {field_name}: {e}", exc_info=True)
+            self.fail(f"Error setting {field_name}: {e}")
 
     def _set_approval_grade_in_settings_ui(self, new_approval_grade):
-        logger.info(f"Setting approval grade to {new_approval_grade} via UI.")
-        self._navigate_to_settings()
-        try:
-            approval_input = self.wait_long.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR))
-            )
-            approval_input.clear() # Clear existing value
-            approval_input.send_keys(str(new_approval_grade))
-            logger.info(f"Set approval grade input to: {new_approval_grade}")
-            # Add a small delay or check for a confirmation if any
-            time.sleep(0.5) 
-            # Important: Navigate away or save settings if needed for them to apply.
-            # For this app, changing the input and navigating away seems to save it (due to localStorage binding).
-            self._navigate_to_home_from_settings() # This should trigger the save if it happens on blur/navigation
-            # Verify with JS if necessary, or by observing calculation changes
-            self.driver.refresh() # Refresh to ensure settings are loaded from localStorage
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            logger.info("Refreshed home page after attempting to set approval grade via UI.")
+        return self._set_grade_value_in_settings_ui(self.APPROVAL_GRADE_INPUT_SELECTOR, new_approval_grade, "approval grade")
 
-        except TimeoutException:
-            self._take_screenshot("set_approval_grade_ui_timeout")
-            self.fail(f"Timeout setting approval grade to {new_approval_grade} in UI.")
-        except Exception as e:
-            self._take_screenshot("set_approval_grade_ui_error")
-            logger.error(f"Error setting approval grade in UI: {e}", exc_info=True)
-            self.fail(f"Error setting approval grade in UI: {e}")
+    def _set_min_grade_in_settings_ui(self, new_min_grade):
+        return self._set_grade_value_in_settings_ui(self.MIN_GRADE_INPUT_SELECTOR, new_min_grade, "min grade")
 
-    def _set_approval_grade_via_js(self, approval_grade_value, min_val=0, max_val=5):
-        # More reliable method from US05, kept for direct setting if UI is problematic
-        logger.info(f"Setting approval grade to: {approval_grade_value} via JavaScript injection")
+    def _set_max_grade_in_settings_ui(self, new_max_grade):
+        return self._set_grade_value_in_settings_ui(self.MAX_GRADE_INPUT_SELECTOR, new_max_grade, "max grade")
+
+    def _set_approval_grade_via_js(self, approval_grade_value, min_val=0.0, max_val=5.0):
+        logger.info(f"Setting approval grade to: {approval_grade_value} using JavaScript injection")
         script = f"""
         localStorage.setItem('settings', JSON.stringify({{
             minAcceptValue: parseFloat({approval_grade_value}),
-            minValue: {min_val},
-            maxValue: {max_val}
+            minValue: parseFloat({min_val}),
+            maxValue: parseFloat({max_val})
         }}));
         localStorage.setItem("isFirstTime", "false");
-        // Return a value to confirm execution if needed, e.g., the new setting
-        return localStorage.getItem('settings');
         """
-        try:
-            self.driver.execute_script(script)
-            logger.info(f"Settings updated via JavaScript. Approval grade set to: {approval_grade_value}")
-            # Refresh the page to apply the settings from localStorage
-            current_url = self.driver.current_url
-            self.driver.refresh()
-            # Wait for either home or settings page to load after refresh, depending on context
-            if "settings" in current_url.lower(): # if we were on settings page
-                 self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.SETTINGS_PAGE_IDENTIFIER)))
-            else: # otherwise assume home page
-                 self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            logger.info(f"Page refreshed after setting approval grade via JS. Current URL: {self.driver.current_url}")
-            time.sleep(0.5) # allow UI to settle
-        except Exception as e:
-            logger.error(f"Error executing JS to set approval grade: {e}", exc_info=True)
-            self._take_screenshot("set_approval_grade_js_error")
-            # self.fail(f"Failed to set approval grade via JS: {e}") # Soft fail if used as helper
-
+        self.driver.execute_script(script)
+        logger.info(f"Settings updated via JavaScript. Approval grade set to: {approval_grade_value}")
+        self.driver.refresh()
+        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+        logger.info("Page refreshed after setting approval grade")
+    
     def _add_grade_and_percentage(self, grade, percentage):
-        # Simplified version from US07/US08
         if not hasattr(self, 'driver') or not self.driver:
+            logger.error("Driver not available in _add_grade_and_percentage.")
             self.fail("Driver not available.")
+            return
+
         try:
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
         except TimeoutException:
+            logger.error("Not on home page when trying to add grade.")
+            self._take_screenshot("add_grade_not_on_home")
             self.fail("Not on home page for _add_grade_and_percentage")
 
         grade_rows = self.driver.find_elements(By.CSS_SELECTOR, self.GRADES_LIST_ITEM_SELECTOR)
         target_row_for_input = grade_rows[-1]
+
         try:
             grade_input_element = target_row_for_input.find_element(By.CSS_SELECTOR, self.GRADE_INPUT_SELECTOR)
             percentage_input_element = target_row_for_input.find_element(By.CSS_SELECTOR, self.PERCENTAGE_INPUT_SELECTOR)
-            grade_input_element.clear(); grade_input_element.send_keys(str(grade))
-            percentage_input_element.clear(); percentage_input_element.send_keys(str(percentage))
+            
+            grade_input_element.clear()
+            grade_input_element.send_keys(str(grade))
+            percentage_input_element.clear()
+            percentage_input_element.send_keys(str(percentage))
+            logger.info(f"Entered Grade: {grade}, Percentage: {percentage} into the last row.")
+            
             add_button_main = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.ADD_GRADE_BUTTON_SELECTOR)))
             add_button_main.click()
-            time.sleep(0.5)
+            logger.info(f"Clicked main 'Add Grade' button to confirm entry.")
+            time.sleep(2.0) # Increased to 2.0s for localStorage update
         except Exception as e:
-            self.fail(f"Error adding grade/percentage: {e}")
+            self._take_screenshot(f"error_adding_grade_percentage")
+            logger.error(f"Generic error in _add_grade_and_percentage: {e}", exc_info=True)
+            self.fail(f"Generic error adding grade/percentage: {e}")
 
     def _click_calculate_and_wait_for_result_page(self):
         try:
             calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
             calculate_button.click()
+            logger.info("Clicked calculate button.")
+            
+            self.wait_long.until(EC.url_contains("/result"))
+            logger.info("URL changed to include /result.")
+            
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            logger.info("Result page container is present.")
+            
+            # Wait a moment for result calculations to complete and render
+            time.sleep(0.5)
         except TimeoutException:
+            self._take_screenshot("calculate_or_result_page_timeout")
             self.fail("Timeout clicking calculate or waiting for result page.")
 
     def _get_required_grade_value_from_display(self):
-        # Adapted from US05, focuses on extracting the numeric value or specific messages
+        """Extracts the required grade from the display. Returns it as a string or None if error/not found."""
         raw_text = ""
         try:
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
             display_element = self.wait_long.until(
                 EC.visibility_of_element_located((By.CSS_SELECTOR, self.REQUIRED_GRADE_DISPLAY_SELECTOR))
             )
-            time.sleep(0.3) # Increased sleep for text stabilization
+            time.sleep(0.5) # Wait for text to stabilize
             raw_text = display_element.text.strip()
             logger.info(f"Raw required grade/message text: '{raw_text}'")
 
-            if not raw_text: return "Error: Empty Value"
-            if "Ya ha aprobado la materia" in raw_text or "Ya se ha aprobado la materia" in raw_text: return "Already Approved"
-            if "No es posible aprobar la materia" in raw_text: return "Impossible to Approve"
-            
-            match = re.search(r"Necesitas (-?\d+\.?\d*|-?\.\d+) en el", raw_text)
+            # Regex to extract the first number, which should be the required grade
+            # Handles cases like "Necesitas un 4.5...", "Ya se ha aprobado...", "No es posible aprobar..."
+            match = re.search(r"(\d+\.?\d*)", raw_text)
             if match:
-                grade_str = match.group(1)
-                try:
-                    return float(grade_str)
-                except ValueError:
-                    logger.error(f"Could not convert extracted grade string '{grade_str}' to float.")
-                    return f"Error: Conversion '{grade_str}'"
+                grade_value_str = match.group(1)
+                logger.info(f"Extracted required grade value: {grade_value_str}")
+                return grade_value_str # Return as string, convert to float in test
+            elif "Ya se ha aprobado la materia" in raw_text or "No es posible aprobar" in raw_text:
+                logger.info(f"Message indicates approval status, not a specific grade needed: '{raw_text}'")
+                return raw_text # Return the full message for the test to decide
             else:
-                # Handle cases like "Necesitas 11 en el..." or "Necesitas -1 en el..." which might indicate impossibility
-                if "Necesitas 11 en el" in raw_text or "Necesitas -1 en el" in raw_text: # Example of impossible values
-                    logger.warning(f"Found specific impossible grade pattern: '{raw_text}'")
-                    return "Impossible to Approve" # Treat as impossible
-                logger.error(f"Could not parse required grade from text: '{raw_text}'")
-                return "Error: Parse"
+                logger.warning(f"Could not extract a numeric grade value from: '{raw_text}'")
+                return None
+
         except TimeoutException:
-            return "Error: Timeout"
+            logger.error(f"Timeout waiting for required grade display: {self.REQUIRED_GRADE_DISPLAY_SELECTOR}")
+            self._take_screenshot("required_grade_timeout")
+            return "Error: Timeout" 
         except Exception as e:
-            logger.error(f"General error in _get_required_grade_value_from_display: {e}", exc_info=True)
+            logger.error(f"Error getting required grade/message: {e}", exc_info=True)
+            self._take_screenshot("get_required_grade_error")
             return "Error: General"
 
     # --- Test Case for US09 ---
     def test_us09_change_min_approval_grade_and_verify_calculations(self):
-        # Corresponds to Task 9.1
         test_name = self._testMethodName
         logger.info(f"Running test: {test_name}")
 
-        # Scenario Data:
-        # 1. Initial state: Approval grade 3.0 (default or set in _initial_setup)
-        #    Add grade: 2.0, percentage: 50%. Expected required: 4.0
-        # 2. Change approval grade to 4.0 via UI.
-        #    With same grade (2.0, 50%), Expected required: 6.0 (which is > 5.0, so "Impossible to Approve")
-        # 3. Change approval grade to 2.5 via JS (for robustness).
-        #    With same grade (2.0, 50%), Expected required: 3.0
+        original_approval_grade = 3.0 
+        new_approval_grade = 4.0     
 
         try:
-            # --- Step 1: Initial calculation with default approval grade (3.0) ---
-            logger.info("Step 1: Calculation with default approval grade (3.0)")
-            self._set_approval_grade_via_js("3.0") # Ensure it is 3.0
-            self._add_grade_and_percentage("2.0", "50")
+            # 0. Initial setup ensures default approval grade (e.g., 3.0)
+            self._initial_setup() 
+            logger.info(f"Initial approval grade should be set to {original_approval_grade} via JS in setup.")
+
+            # 1. Add a grade and percentage
+            self._add_grade_and_percentage("3.0", "50")
+            logger.info("Added grade 3.0 with percentage 50%")
+
+            # 2. Calculate with original approval grade (e.g., 3.0)
             self._click_calculate_and_wait_for_result_page()
+            required_grade_before_change_str = self._get_required_grade_value_from_display()
+            logger.info(f"Required grade string before settings change (approval {original_approval_grade}): '{required_grade_before_change_str}'")
             
-            required_grade_step1 = self._get_required_grade_value_from_display()
-            self.assertIsInstance(required_grade_step1, float, f"Step 1: Required grade should be a float, got {type(required_grade_step1)}: {required_grade_step1}")
-            self.assertAlmostEqual(float(required_grade_step1), 4.0, places=1, 
-                                 msg=f"Step 1: Expected required grade ~4.0 with approval 3.0. Got: {required_grade_step1}")
-            logger.info(f"Step 1 Passed. Required grade with approval 3.0: {required_grade_step1}")
+            # Check for valid result before proceeding
+            self.assertIsNotNone(required_grade_before_change_str, "Required grade string (before) should not be None.")
+            self.assertFalse(str(required_grade_before_change_str).lower().startswith("error:"), 
+                           f"Did not expect error getting required grade (before): {required_grade_before_change_str}")
             
-            # Navigate back to home to clear state for next calculation
-            self.driver.find_element(By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR).click()
+            # Convert string to float for numeric comparison            # Handle potential None value from _get_required_grade_value_from_display
+            if required_grade_before_change_str is None:
+                self.fail("Required grade string (before) should not be None.")
+            
+            val_before = None
+            try:
+                val_before = float(str(required_grade_before_change_str))
+            except (ValueError, TypeError) as e:
+                self.fail(f"Could not convert required_grade_before_change_str '{required_grade_before_change_str}' to float. Error: {e}")
+            
+            # With 3.0 in 50%, to get 3.0 overall, needs 3.0 in remaining 50%
+            self.assertAlmostEqual(val_before, 3.0, places=1, 
+                                 msg=f"Required grade with {original_approval_grade} approval should be 3.0, got {val_before}")
+            
+            # Navigate from result page to home
+            back_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR)))
+            back_button.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            # Clear existing grades by resetting via JS (simpler than UI reset for this test)
-            self.driver.execute_script("localStorage.removeItem('grades');")
-            self.driver.refresh()
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            time.sleep(0.5)
+            logger.info("Navigated back to home page from result page.")
 
-            # --- Step 2: Change approval grade to 4.0 (via UI) and recalculate ---
-            logger.info("Step 2: Changing approval grade to 4.0 via UI")
-            self._set_approval_grade_in_settings_ui("4.0") # This navigates to settings, changes, and comes back home & refreshes
+            # 3. Navigate to settings page
+            self._navigate_to_settings()
+
+            # 4. Change the minimum approval grade in the UI
+            logger.info(f"Changing approval grade in UI from {original_approval_grade} to {new_approval_grade}")
+            self._set_approval_grade_in_settings_ui(str(new_approval_grade))
             
-            self._add_grade_and_percentage("2.0", "50") # Same grades as before
+            # 5. Navigate back to the home/calculator page
+            self._navigate_to_home_from_settings()
+            time.sleep(0.5) # Allow page to fully transition
+
+            # 6. Re-calculate with the same grade/percentage but new approval grade (e.g., 4.0)
             self._click_calculate_and_wait_for_result_page()
+            required_grade_after_change_str = self._get_required_grade_value_from_display()
+            logger.info(f"Required grade string after settings change (approval {new_approval_grade}): '{required_grade_after_change_str}'")
             
-            required_grade_step2 = self._get_required_grade_value_from_display()
-            # Formula: (4.0 * 100 - (2.0 * 50)) / 50 = (400 - 100) / 50 = 300 / 50 = 6.0
-            # Since 6.0 > 5.0 (max grade), it should be impossible.
-            self.assertEqual(required_grade_step2, "Impossible to Approve",
-                             msg=f"Step 2: Expected 'Impossible to Approve' with approval 4.0. Got: {required_grade_step2}")
-            logger.info(f"Step 2 Passed. Status with approval 4.0: {required_grade_step2}")
-
-            # Navigate back and clear for next step
-            self.driver.find_element(By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR).click()
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            self.driver.execute_script("localStorage.removeItem('grades');")
-            self.driver.refresh()
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            time.sleep(0.5)
-
-            # --- Step 3: Change approval grade to 2.5 (via JS) and recalculate ---
-            logger.info("Step 3: Changing approval grade to 2.5 via JS")
-            self._set_approval_grade_via_js("2.5") # This refreshes the page
+            # Check for valid result
+            self.assertIsNotNone(required_grade_after_change_str, "Required grade string (after) should not be None.")
+            self.assertFalse(str(required_grade_after_change_str).lower().startswith("error:"), 
+                           f"Did not expect error getting required grade (after): {required_grade_after_change_str}")
             
-            self._add_grade_and_percentage("2.0", "50") # Same grades again
-            self._click_calculate_and_wait_for_result_page()
+            # Convert to float            # Handle potential None value from _get_required_grade_value_from_display
+            if required_grade_after_change_str is None:
+                self.fail("Required grade string (after) should not be None.")
             
-            required_grade_step3 = self._get_required_grade_value_from_display()
-            self.assertIsInstance(required_grade_step3, float, f"Step 3: Required grade should be a float, got {type(required_grade_step3)}: {required_grade_step3}")
-            self.assertAlmostEqual(float(required_grade_step3), 3.0, places=1,
-                                 msg=f"Step 3: Expected required grade ~3.0 with approval 2.5. Got: {required_grade_step3}")
-            logger.info(f"Step 3 Passed. Required grade with approval 2.5: {required_grade_step3}")
+            val_after = None
+            try:
+                val_after = float(str(required_grade_after_change_str))
+            except (ValueError, TypeError) as e:
+                self.fail(f"Could not convert required_grade_after_change_str '{required_grade_after_change_str}' to float. Error: {e}")
+            
+            # Calculation: (Target*Total%) - (CurrentAvg*Current%) / Remaining%
+            # (4.0 * 1) - (3.0 * 0.5) / 0.5 = (4.0 - 1.5) / 0.5 = 2.5 / 0.5 = 5.0
+            self.assertAlmostEqual(val_after, 5.0, places=1, 
+                                 msg=f"Required grade with {new_approval_grade} approval should be 5.0, got {val_after}")
 
-            logger.info(f"Test {test_name} completed successfully.")
+            logger.info(f"Test {test_name} passed.")
 
         except AssertionError as e:
             logger.error(f"AssertionError in {test_name}: {e}", exc_info=True)

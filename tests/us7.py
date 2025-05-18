@@ -37,7 +37,8 @@ class US07Tests(unittest.TestCase):
 
     # Placeholder for reset button - User Story 07
     # The selenium-test-dev.md does not specify a selector. Common patterns: id="reset-button", text "Reiniciar", type="reset"
-    RESET_BUTTON_SELECTOR = "button[aria-label='Reiniciar formulario de notas']" # Using aria-label
+    # RESET_BUTTON_SELECTOR = "button[aria-label='Reiniciar formulario de notas']" # Using aria-label
+    RESET_BUTTON_SELECTOR = "button.home__button.home__reset-button" # Reverted to class-based selector as per selenium-test-dev.md example
 
     # Selectors needed for setting up scenarios (from US05, though not directly tested here)
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
