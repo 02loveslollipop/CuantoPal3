@@ -2,8 +2,8 @@
 import unittest
 import os
 import time
-import re
-import logging
+import re # Added for parsing
+import logging # Added for logging
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -19,25 +19,23 @@ class US05Tests(unittest.TestCase):
     BASE_URL = "http://localhost:3000"
     GRADE_INPUT_SELECTOR = "input.home__input[placeholder='0.0'][type='number']"
     PERCENTAGE_INPUT_SELECTOR = "input.home__input[placeholder='0'][type='number']"
-    ADD_GRADE_BUTTON_SELECTOR = "button.home__add-button"
+    ADD_GRADE_BUTTON_SELECTOR = "button.home__add-button" # General button to add a new grade entry/row
     GRADES_LIST_ITEM_SELECTOR = "div.home__grades-container > div.home__grade-row"
     CALCULATE_BUTTON_SELECTOR = "button.home__calculate-button"
     
     # Selectors for US05 - specific to the result page
-    REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed" # Hypothetical, needs verification
-    # For "impossible to approve" or "already approved" messages, it might be the same element
-    # or a different status message area. Assuming it's the same for now.
-    
-    RESULT_PAGE_CONTAINER_SELECTOR = "div.result"
+    REQUIRED_GRADE_DISPLAY_SELECTOR = "p.result__card-needed" # For required grade display
+    RESULT_PAGE_CONTAINER_SELECTOR = "div.result" 
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
+    # Original complex XPath selector
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
     # Simpler CSS selector for the back button - targeting the first button in the nav-bar
     NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
     HOME_CONTAINER_SELECTOR = "div.home__container"
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
-    APPROVAL_GRADE_INPUT_SELECTOR = "input.settings__input[type='number']" # Hypothetical for settings page
-
+    APPROVAL_GRADE_INPUT_SELECTOR = "input.settings__input[type='number']"
+    
     def set_driver_fixture(self, driver):
         self.driver = driver
         self.wait_short = WebDriverWait(self.driver, 5)
@@ -46,35 +44,35 @@ class US05Tests(unittest.TestCase):
             os.makedirs("screenshots")
 
     def setUp(self):
+        # This setup is primarily for direct unittest execution.
+        # Pytest will use the fixture from conftest.py
         if not hasattr(self, 'driver') or not self.driver:
             logger.info("WebDriver not set by fixture, attempting fallback setup for direct unittest execution.")
             try:
                 options = webdriver.ChromeOptions()
+                # Add any desired options here, e.g., headless
                 # options.add_argument('--headless')
                 # options.add_argument('--disable-gpu')
-                # options.add_argument('--window-size=1920,1080')
                 self.driver = webdriver.Chrome(options=options)
+                self.set_driver_fixture(self.driver) # Call to setup waits and screenshot dir
                 self.is_driver_managed_by_fallback = True
+                logger.info("Fallback WebDriver initialized for direct unittest execution.")
             except Exception as e:
                 logger.error(f"Failed to initialize fallback WebDriver: {e}")
                 self.fail(f"Failed to initialize fallback WebDriver: {e}")
         else:
+            logger.info("WebDriver already set, likely by a pytest fixture.")
             self.is_driver_managed_by_fallback = False
-        
-        if hasattr(self, 'driver') and self.driver:
-            self.set_driver_fixture(self.driver)
-        else:
-            logger.error("Driver is not initialized after setup attempt.")
-            self.fail("Driver could not be initialized.")
-            return
-        self._initial_setup()    
-    
+        self._initial_setup()
+
     def tearDown(self):
         if hasattr(self, 'is_driver_managed_by_fallback') and self.is_driver_managed_by_fallback:
             if self.driver:
                 self.driver.quit()
-        # For pytest-managed driver, teardown is handled by the fixture
-    
+                logger.info("Fallback WebDriver quit.")
+        else:
+            logger.info("Driver teardown managed by pytest fixture (if applicable).")
+            
     def _take_screenshot(self, name_suffix):
         timestamp = int(time.time())
         test_method_name = getattr(self, '_testMethodName', 'unknown_test')
@@ -85,8 +83,82 @@ class US05Tests(unittest.TestCase):
                 logger.info(f"Screenshot saved: {screenshot_name}")
         except Exception as e:
             logger.error(f"Error saving screenshot {screenshot_name}: {e}")
+              def _set_approval_grade(self, approval_grade_value):
+        logger.info(f"Setting approval grade to: {approval_grade_value} using JavaScript injection")
+        # Instead of navigating to settings, set the approval grade directly using JavaScript
+        # This is more reliable and faster than navigating through the UI
+        
+        script = f"""
+        const settingsManager = {{}};
+        settingsManager._minAcceptValue = {approval_grade_value};
+        settingsManager._minValue = 0;
+        settingsManager._maxValue = 5;
+        
+        localStorage.setItem('settings', JSON.stringify({{
+            minAcceptValue: settingsManager._minAcceptValue,
+            minValue: settingsManager._minValue,
+            maxValue: settingsManager._maxValue
+        }}));
+        
+        localStorage.setItem("isFirstTime", "false");
+        """
+        
+        # Execute the script to update the settings
+        self.driver.execute_script(script)
+        logger.info(f"Settings updated via JavaScript. Approval grade set to: {approval_grade_value}")
+        
+        # Refresh the page to apply the settings
+        self.driver.refresh()
+        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
+        logger.info("Page refreshed after setting approval grade")
     
-    def _initial_setup(self):
+    def _get_required_grade_or_message(self):
+        raw_text = ""
+        try:
+            # Ensure on result page
+            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
+            
+            display_element = self.wait_long.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.REQUIRED_GRADE_DISPLAY_SELECTOR))
+            )
+            time.sleep(0.2) # Allow text to stabilize
+            raw_text = display_element.text.strip()
+            logger.info(f"Raw required grade/message text: '{raw_text}'")
+
+            if not raw_text:
+                logger.warning("Required grade/message text is empty.")
+                self._take_screenshot("empty_required_grade_message")
+                return "Error: Empty Value"
+
+            # Check for specific messages first
+            if "No es posible aprobar la materia" in raw_text:
+                return "No es posible aprobar" # Standardized message
+            if "Ya se ha aprobado la materia" in raw_text:
+                return "Ya se ha aprobado la materia"
+            
+            # Try to parse a grade
+            # Example text: "Necesitas un 4.0 en el 50% restante para aprobar la materia con un 3.0"
+            match = re.search(r"Necesitas un (\d+\.?\d*|\.\d+) en el", raw_text)
+            if match:
+                grade_str = match.group(1)
+                logger.info(f"Extracted required grade string: '{grade_str}'")
+                return float(grade_str)
+            else:
+                logger.error(f"Could not parse required grade from text: '{raw_text}'")
+                self._take_screenshot("required_grade_parse_error")
+                return "Error: Parse"
+        except TimeoutException:
+            logger.error(f"Timeout waiting for required grade display: {self.REQUIRED_GRADE_DISPLAY_SELECTOR}")
+            self._take_screenshot("required_grade_timeout")
+            return "Error: Timeout"
+        except ValueError:
+            logger.error(f"Could not convert extracted grade string to float from '{raw_text}'.")
+            self._take_screenshot("required_grade_value_error")
+            return "Error: Conversion"
+        except Exception as e:
+            logger.error(f"Error getting required grade/message: {e}", exc_info=True)
+            self._take_screenshot("get_required_grade_error")
+            return "Error: General"    def _initial_setup(self):
         if not hasattr(self, 'driver') or not self.driver:
             logger.error("Driver not initialized in _initial_setup. Aborting setup.")
             self.fail("Driver not initialized for test setup.")
@@ -94,6 +166,7 @@ class US05Tests(unittest.TestCase):
 
         self.driver.get(self.BASE_URL)
         logger.info(f"Navigated to base URL: {self.BASE_URL}")
+
         try:
             logger.info(f"Attempting to handle first-time alert with button '{self.FIRST_TIME_ALERT_BUTTON_SELECTOR}'.")
             alert_button = WebDriverWait(self.driver, 10).until(
@@ -121,60 +194,38 @@ class US05Tests(unittest.TestCase):
                 logger.info("Found back button using XPath selector.")
                 
             nav_back_button.click()
+            logger.info("Clicked nav back button to return to Home page.")
+            
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
             )
             logger.info("Successfully navigated back to the Home page after initial alert.")
+
         except TimeoutException:
-            logger.info("First-time user alert or subsequent navigation elements not found. Assuming already on Home page or alert handled.")
+            logger.info("First-time user alert or subsequent navigation elements not found or timed out. Checking if already on Home page.")
             try:
-                self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-                logger.info("Confirmed on Home page.")
-            except TimeoutException:
-                logger.error(f"Failed to ensure presence on Home page. Current URL: {self.driver.current_url}")
-                self._take_screenshot("initial_setup_home_fallback_failed")
-                self.fail("Could not ensure presence on the Home page during initial setup.")
+                self.driver.find_element(By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)
+                logger.info("Already on the Home page or initial alert was not present.")
+            except NoSuchElementException:
+                logger.warning(f"Home container '{self.HOME_CONTAINER_SELECTOR}' not found. Attempting to re-navigate to BASE_URL.")
+                self.driver.get(self.BASE_URL) 
+                try:
+                    WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR))
+                    )
+                    logger.info("Successfully navigated to Home page as a fallback.")
+                except TimeoutException:
+                    logger.error("Failed to ensure presence on Home page even after fallback. Current URL: %s", self.driver.current_url)
+                    self._take_screenshot("initial_setup_home_fallback_failed")
+                    self.fail("Could not ensure presence on the Home page during initial setup.")
         except Exception as e:
             logger.error(f"An unexpected error occurred during initial setup: {e}", exc_info=True)
             self._take_screenshot("initial_setup_error")
             self.fail(f"Unexpected error during initial setup: {e}")
-          # Ensure approval grade is 3.0 (default)
+            
+        # Ensure approval grade is set to 3.0 (default for tests)
         self._set_approval_grade("3.0")
-
-    def _set_approval_grade(self, approval_grade_value):
-        logger.info(f"Setting approval grade to: {approval_grade_value}")
-        # Navigate to settings if not already there or on home
-        current_url = self.driver.current_url
-        on_settings_page = False
-        try:
-            if self.driver.find_element(By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR).is_displayed():
-                on_settings_page = True
-        except NoSuchElementException: # Not on settings
-            pass
-        
-        if not on_settings_page:
-            # If on result page, go back home first
-            try:
-                if self.driver.find_element(By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR).is_displayed():
-                    self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
-                    self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-            except NoSuchElementException:
-                pass # Not on result page, or already home
-
-            # Now on home (or was already), navigate to settings
-            self.wait_long.until(EC.element_to_be_clickable((By.XPATH, self.SETTINGS_NAV_BUTTON_XPATH))).click()
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
-            logger.info("Navigated to Settings page.")
-
-        approval_input = self.wait_long.until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
-        approval_input.clear()
-        approval_input.send_keys(str(approval_grade_value))
-        logger.info(f"Set approval grade input to {approval_grade_value}.")
-        
-        # Navigate back to Home page
-        self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
-        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
-        logger.info("Navigated back to Home page from Settings.")
+                
     def _add_grade_and_percentage(self, grade, percentage):
         if not hasattr(self, 'driver') or not self.driver:
             logger.error("Driver not available in _add_grade_and_percentage.")
@@ -307,56 +358,7 @@ class US05Tests(unittest.TestCase):
             logger.error(f"Could not find input elements in the grade row: {e}")
             self._take_screenshot("input_elements_not_found")
             self.fail(f"Input elements not found: {e}")
-            return
-
-    def _get_required_grade_or_message(self):
-        raw_text = ""
-        try:
-            # Ensure on result page
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
-            
-            display_element = self.wait_long.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.REQUIRED_GRADE_DISPLAY_SELECTOR))
-            )
-            time.sleep(0.2) # Allow text to stabilize
-            raw_text = display_element.text.strip()
-            logger.info(f"Raw required grade/message text: '{raw_text}'")
-
-            if not raw_text:
-                logger.warning("Required grade/message text is empty.")
-                self._take_screenshot("empty_required_grade_message")
-                return "Error: Empty Value"
-
-            # Check for specific messages first
-            if "No es posible aprobar la materia" in raw_text:
-                return "No es posible aprobar" # Standardized message
-            if "Ya se ha aprobado la materia" in raw_text:
-                return "Ya se ha aprobado la materia"
-              # Try to parse a grade
-            # Example text: "Necesitas un 4.0 en el 50% restante para aprobar la materia con un 3.0"
-            match = re.search(r"Necesitas un (\d+\.?\d*|\.\d+) en el", raw_text)
-            if match:
-                grade_str = match.group(1)
-                logger.info(f"Extracted required grade string: '{grade_str}'")
-                return float(grade_str)
-            else:
-                logger.error(f"Could not parse required grade from text: '{raw_text}'")
-                self._take_screenshot("required_grade_parse_error")
-                return "Error: Parse"
-        except TimeoutException:
-            logger.error(f"Timeout waiting for required grade display: {self.REQUIRED_GRADE_DISPLAY_SELECTOR}")
-            self._take_screenshot("required_grade_timeout")
-            return "Error: Timeout"
-        except ValueError:
-            logger.error(f"Could not convert extracted grade string to float from '{raw_text}'.")
-            self._take_screenshot("required_grade_value_error")
-            return "Error: Conversion"
-        except Exception as e:
-            logger.error(f"Error getting required grade/message: {e}", exc_info=True)
-            self._take_screenshot("get_required_grade_error")
-            return "Error: General"
-
-    def _click_calculate_and_wait_for_result_page(self):
+            return    def _click_calculate_and_wait_for_result_page(self):
         calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
         calculate_button.click()
         self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
