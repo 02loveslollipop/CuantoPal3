@@ -99,29 +99,33 @@ jobs:
       run: |
         # Check if tests directory exists, if not create it
         mkdir -p tests
-        cd tests
-        python -m pip install --upgrade pip
-        # Create requirements.txt with necessary packages
-        echo -e "pytest\nselenium\nwebdriver-manager\npytest-html" > requirements.txt
-        pip install -r requirements.txt
+        # Check if requirements.txt exists, if not create it
+        if [ ! -f tests/requirements.txt ]; then
+          echo "selenium" > tests/requirements.txt
+        fi
+        pip install -r tests/requirements.txt
 
     - name: Run Selenium tests
       run: |
-        # Create screenshots directory if it doesn't exist
-        mkdir -p tests/screenshots
-        
         cd tests
-        python -m pytest -v --html=report.html us1.py us2.py us3.py us4.py
-      env:
-        APP_URL: 'http://localhost:3000'
-        PYTHONPATH: ${{ github.workspace }}
+        pytest us1.py us2.py us3.py us4.py us5.py  # Added us5.py
 
-    - name: Upload test results
-      if: always()
+    - name: Upload screenshots artifact (on failure)
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
-        path: |
-          tests/screenshots/
-          tests/report.html
-        retention-days: 5
+        name: selenium-test-screenshots
+        path: tests/screenshots/
+        retention-days: 7
+
+    - name: Stop React server
+      if: always() # Ensure server is stopped even if tests fail
+      run: |
+        # Find and kill the process listening on port 3000
+        PID=$(lsof -t -i:3000)
+        if [ -n "$PID" ]; then
+          kill $PID
+          echo "React server stopped."
+        else
+          echo "React server not found or already stopped."
+        fi
