@@ -31,6 +31,80 @@ class US04Tests(unittest.TestCase):
     # Simpler CSS selector for the back button - targeting the first button in the nav-bar
     NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
     HOME_CONTAINER_SELECTOR = "div.home__container"
+    
+    def set_driver_fixture(self, driver):
+        self.driver = driver
+        self.wait_short = WebDriverWait(self.driver, 5)
+        self.wait_long = WebDriverWait(self.driver, 15)
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
+
+    def setUp(self):
+        # This setup is primarily for direct unittest execution.
+        # Pytest will use the fixture from conftest.py
+        if not hasattr(self, 'driver') or not self.driver:
+            logger.info("WebDriver not set by fixture, attempting fallback setup for direct unittest execution.")
+            try:
+                options = webdriver.ChromeOptions()
+                # Add any desired options here, e.g., headless
+                # options.add_argument('--headless')
+                # options.add_argument('--disable-gpu')
+                self.driver = webdriver.Chrome(options=options)
+                self.set_driver_fixture(self.driver) # Call to setup waits and screenshot dir
+                self.is_driver_managed_by_fallback = True
+                logger.info("Fallback WebDriver initialized for direct unittest execution.")
+            except Exception as e:
+                logger.error(f"Failed to initialize fallback WebDriver: {e}")
+                self.fail(f"Failed to initialize fallback WebDriver: {e}")
+        else:
+            logger.info("WebDriver already set, likely by a pytest fixture.")
+            self.is_driver_managed_by_fallback = False
+        self._initial_setup()
+
+    def tearDown(self):
+        if hasattr(self, 'is_driver_managed_by_fallback') and self.is_driver_managed_by_fallback:
+            if self.driver:
+                self.driver.quit()
+                logger.info("Fallback WebDriver quit.")
+        else:
+            logger.info("Driver teardown managed by pytest fixture (if applicable).")
+            
+    def _take_screenshot(self, name_suffix):
+        timestamp = int(time.time())
+        test_method_name = getattr(self, '_testMethodName', 'unknown_test')
+        screenshot_name = f"screenshots/{test_method_name}_{name_suffix}_{timestamp}.png"
+        try:
+            if hasattr(self, 'driver') and self.driver:
+                self.driver.save_screenshot(screenshot_name)
+                logger.info(f"Screenshot saved: {screenshot_name}")
+        except Exception as e:
+            logger.error(f"Error saving screenshot {screenshot_name}: {e}")
+            
+    def _get_current_weighted_average(self):
+        """Extract and return the current weighted average from the result page."""
+        try:
+            current_avg_element = self.wait_long.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
+            )
+            current_avg_text = current_avg_element.text.strip()
+            logger.info(f"Current average text found: '{current_avg_text}'")
+            
+            # Extract the numeric value using regex - looking for decimal number
+            match = re.search(r'(\d+\.\d+)', current_avg_text)
+            if match:
+                current_avg = float(match.group(1))
+                logger.info(f"Extracted current average: {current_avg}")
+                return current_avg
+            else:
+                logger.error(f"Failed to extract numeric average from text: '{current_avg_text}'")
+                self._take_screenshot("average_extraction_failed")
+                self.fail(f"Could not extract numeric average from: '{current_avg_text}'")
+                
+        except Exception as e:
+            logger.error(f"Error getting current weighted average: {e}")
+            self._take_screenshot("get_current_avg_error")
+            self.fail(f"Error getting current weighted average: {e}")
+            return None
 
     def _initial_setup(self):
         if not hasattr(self, 'driver') or not self.driver:
