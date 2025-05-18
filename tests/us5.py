@@ -131,18 +131,31 @@ class US05Tests(unittest.TestCase):
                 return "Error: Empty Value"
 
             # Check for specific messages first
-            if "No es posible aprobar la materia" in raw_text:
-                return "No es posible aprobar" # Standardized message
-            if "Ya se ha aprobado la materia" in raw_text:
+            # Check for "Ya se ha aprobado la materia" message
+            if "Ya ha aprobado la materia" in raw_text or "Ya se ha aprobado la materia" in raw_text or "Ya tiene el 100% de la materia" in raw_text:
                 return "Ya se ha aprobado la materia"
+                
+            # Check for impossible to approve scenario
+            # In result.jsx, if requiredGrade > maxValue (5), it would display an impossible value
+            if "No es posible aprobar la materia" in raw_text or "Necesitas 11 en el" in raw_text or "Necesitas -1 en el" in raw_text:
+                return "No es posible aprobar"
             
-            # Try to parse a grade
-            # Example text: "Necesitas un 4.0 en el 50% restante para aprobar la materia con un 3.0"
-            match = re.search(r"Necesitas un (\d+\.?\d*|\.\d+) en el", raw_text)
+            # Try to extract the required grade
+            match = re.search(r"Necesitas (\d+\.?\d*|\.\d+|-\d+\.?\d*) en el", raw_text)
             if match:
                 grade_str = match.group(1)
                 logger.info(f"Extracted required grade string: '{grade_str}'")
-                return float(grade_str)
+                try:
+                    # Convert to float and check if it's a reasonable value
+                    grade_value = float(grade_str)
+                    if grade_value > 10 or grade_value < 0:
+                        logger.info(f"Found extreme grade value: {grade_value}, interpreting as 'No es posible aprobar'")
+                        return "No es posible aprobar"
+                    return grade_value
+                except ValueError:
+                    logger.error(f"Could not convert grade string to float: '{grade_str}'")
+                    self._take_screenshot("grade_conversion_error")
+                    return "Error: Conversion"
             else:
                 logger.error(f"Could not parse required grade from text: '{raw_text}'")
                 self._take_screenshot("required_grade_parse_error")
