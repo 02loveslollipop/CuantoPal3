@@ -37,7 +37,7 @@ class US07Tests(unittest.TestCase):
 
     # Placeholder for reset button - User Story 07
     # The selenium-test-dev.md does not specify a selector. Common patterns: id="reset-button", text "Reiniciar", type="reset"
-    RESET_BUTTON_SELECTOR = "button.home__reset-button" # Corrected selector
+    RESET_BUTTON_SELECTOR = "button[aria-label='Reiniciar formulario de notas']" # Using aria-label for robustness
 
     # Selectors needed for setting up scenarios (from US05, though not directly tested here)
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
@@ -210,9 +210,6 @@ class US07Tests(unittest.TestCase):
             # If no suitable empty last row, click add button to ensure a fresh row is available if necessary
             # The application's React logic might add a row automatically on input to the last row,
             # but clicking "Add Grade" button explicitly ensures a new row if the current last one is filled.
-            # For this simplified helper, we rely on the app adding a new row if we type in the last filled one,
-            # or we target the last empty one.
-            # The main "Add Grade" button is for *confirming* the entered grade and adding another empty row.
             pass # We will target the last row's inputs directly.
 
         # Re-fetch rows in case clicking "Add Grade" was done (though removed from this simplified version)
