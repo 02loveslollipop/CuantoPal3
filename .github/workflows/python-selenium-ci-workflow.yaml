@@ -108,7 +108,7 @@ jobs:
     - name: Run Selenium tests
       run: |
         cd tests
-        pytest us1.py us2.py us3.py us4.py us5.py  # Added us5.py
+        pytest us1.py us2.py us3.py us4.py us5.py us6.py
 
     - name: Upload screenshots artifact (on failure)
       if: failure()
