@@ -302,7 +302,10 @@ class US04Tests(unittest.TestCase):
 
             # --- Navigate back for Test Step 2 ---
             logger.info("Navigating back to home page for 2nd grade.")
-            self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+            nav_back_button_step1 = self.wait_long.until(
+                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+            )
+            nav_back_button_step1.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info(f"Navigated back to home page for 2nd grade.")
 
@@ -325,7 +328,10 @@ class US04Tests(unittest.TestCase):
 
             # --- Navigate back for Test Step 3 ---
             logger.info("Navigating back to home page for 3rd grade.")
-            self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+            nav_back_button_step2 = self.wait_long.until(
+                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+            )
+            nav_back_button_step2.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info(f"Navigated back to home page for 3rd grade.")
 
