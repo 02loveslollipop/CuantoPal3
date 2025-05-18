@@ -1,4 +1,3 @@
-\
 import unittest
 import os
 import time
@@ -83,7 +82,8 @@ class US05Tests(unittest.TestCase):
                 logger.info(f"Screenshot saved: {screenshot_name}")
         except Exception as e:
             logger.error(f"Error saving screenshot {screenshot_name}: {e}")
-              def _set_approval_grade(self, approval_grade_value):
+            
+    def _set_approval_grade(self, approval_grade_value):
         logger.info(f"Setting approval grade to: {approval_grade_value} using JavaScript injection")
         # Instead of navigating to settings, set the approval grade directly using JavaScript
         # This is more reliable and faster than navigating through the UI
@@ -158,7 +158,9 @@ class US05Tests(unittest.TestCase):
         except Exception as e:
             logger.error(f"Error getting required grade/message: {e}", exc_info=True)
             self._take_screenshot("get_required_grade_error")
-            return "Error: General"    def _initial_setup(self):
+            return "Error: General"
+            
+    def _initial_setup(self):
         if not hasattr(self, 'driver') or not self.driver:
             logger.error("Driver not initialized in _initial_setup. Aborting setup.")
             self.fail("Driver not initialized for test setup.")
@@ -358,7 +360,9 @@ class US05Tests(unittest.TestCase):
             logger.error(f"Could not find input elements in the grade row: {e}")
             self._take_screenshot("input_elements_not_found")
             self.fail(f"Input elements not found: {e}")
-            return    def _click_calculate_and_wait_for_result_page(self):
+            return
+            
+    def _click_calculate_and_wait_for_result_page(self):
         calculate_button = self.wait_long.until(EC.element_to_be_clickable((By.CSS_SELECTOR, self.CALCULATE_BUTTON_SELECTOR)))
         calculate_button.click()
         self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.RESULT_PAGE_CONTAINER_SELECTOR)))
