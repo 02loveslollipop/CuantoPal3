@@ -27,7 +27,7 @@ class US09Tests(unittest.TestCase):
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
-    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
+    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-of-type" # Refined selector
     HOME_CONTAINER_SELECTOR = "div.home__container"
 
     # Selectors for results verification
@@ -35,6 +35,7 @@ class US09Tests(unittest.TestCase):
 
     # Selectors for US09 - Settings page
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
+    SETTINGS_NAV_BUTTON_SELECTOR = "nav.nav-bar button.nav-bar__button:nth-of-type(2)" # CSS selector for the settings button (assuming it's the second button)
     APPROVAL_GRADE_INPUT_SELECTOR = "input.settings__input[type='number']" # As per selenium-test-dev.md
     SETTINGS_PAGE_IDENTIFIER = "div.settings__container" # Assuming a container for settings page
 
@@ -141,16 +142,23 @@ class US09Tests(unittest.TestCase):
     def _navigate_to_settings(self):
         logger.info("Navigating to Settings page.")
         try:
+            # Try CSS selector first
+            logger.info(f"Attempting to click settings button with CSS selector: {self.SETTINGS_NAV_BUTTON_SELECTOR}")
+            settings_button = self.wait_long.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, self.SETTINGS_NAV_BUTTON_SELECTOR))
+            )
+            logger.info("Found settings button using CSS selector.")
+        except TimeoutException:
+            logger.info("CSS selector failed for settings button, trying XPath...")
             settings_button = self.wait_long.until(
                 EC.element_to_be_clickable((By.XPATH, self.SETTINGS_NAV_BUTTON_XPATH))
             )
-            settings_button.click()
-            self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.SETTINGS_PAGE_IDENTIFIER)))
-            self.wait_long.until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
-            logger.info("Successfully navigated to Settings page.")
-        except TimeoutException:
-            self._take_screenshot("navigate_to_settings_timeout")
-            self.fail("Timeout navigating to Settings page or finding approval grade input.")
+            logger.info("Found settings button using XPath selector.")
+            
+        settings_button.click()
+        self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.SETTINGS_PAGE_IDENTIFIER)))
+        self.wait_long.until(EC.visibility_of_element_located((By.CSS_SELECTOR, self.APPROVAL_GRADE_INPUT_SELECTOR)))
+        logger.info("Successfully navigated to Settings page.")
 
     def _navigate_to_home_from_settings(self):
         logger.info("Navigating to Home page from Settings.")
@@ -314,7 +322,8 @@ class US09Tests(unittest.TestCase):
             self._click_calculate_and_wait_for_result_page()
             
             required_grade_step1 = self._get_required_grade_value_from_display()
-            self.assertAlmostEqual(required_grade_step1, 4.0, places=1, 
+            self.assertIsInstance(required_grade_step1, float, f"Step 1: Required grade should be a float, got {type(required_grade_step1)}: {required_grade_step1}")
+            self.assertAlmostEqual(float(required_grade_step1), 4.0, places=1, 
                                  msg=f"Step 1: Expected required grade ~4.0 with approval 3.0. Got: {required_grade_step1}")
             logger.info(f"Step 1 Passed. Required grade with approval 3.0: {required_grade_step1}")
             
@@ -357,8 +366,8 @@ class US09Tests(unittest.TestCase):
             self._click_calculate_and_wait_for_result_page()
             
             required_grade_step3 = self._get_required_grade_value_from_display()
-            # Formula: (2.5 * 100 - (2.0 * 50)) / 50 = (250 - 100) / 50 = 150 / 50 = 3.0
-            self.assertAlmostEqual(required_grade_step3, 3.0, places=1,
+            self.assertIsInstance(required_grade_step3, float, f"Step 3: Required grade should be a float, got {type(required_grade_step3)}: {required_grade_step3}")
+            self.assertAlmostEqual(float(required_grade_step3), 3.0, places=1,
                                  msg=f"Step 3: Expected required grade ~3.0 with approval 2.5. Got: {required_grade_step3}")
             logger.info(f"Step 3 Passed. Required grade with approval 2.5: {required_grade_step3}")
 

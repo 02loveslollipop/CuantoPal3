@@ -30,7 +30,7 @@ class US05Tests(unittest.TestCase):
     # Original complex XPath selector
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
     # Simpler CSS selector for the back button - targeting the first button in the nav-bar
-    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
+    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-of-type" # Refined selector
     HOME_CONTAINER_SELECTOR = "div.home__container"
     SETTINGS_NAV_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'settings-icon')]/svg[contains(@class, 'lucide-settings')]]"
     APPROVAL_GRADE_INPUT_SELECTOR = "input.settings__input[type='number']"

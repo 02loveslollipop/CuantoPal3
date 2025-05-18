@@ -27,7 +27,7 @@ class US08Tests(unittest.TestCase):
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
-    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
+    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-of-type" # Refined selector
     HOME_CONTAINER_SELECTOR = "div.home__container"
 
     # Selectors for results verification (from US4, US5, US6)
