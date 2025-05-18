@@ -26,61 +26,11 @@ class US04Tests(unittest.TestCase):
     RESULT_PAGE_CONTAINER_SELECTOR = "div.result" 
     FIRST_TIME_ALERT_BUTTON_SELECTOR = ".alert__button.alert__button--single"
     ALERT_OVERLAY_SELECTOR = "div.alert__overlay"
+    # Original complex XPath selector
     NAV_BACK_BUTTON_XPATH = "//button[contains(@class, 'nav-bar__button') and .//span[contains(@class, 'back-icon')]/svg[contains(@class, 'lucide-chevron-left')]]"
+    # Simpler CSS selector for the back button - targeting the first button in the nav-bar
+    NAV_BACK_BUTTON_SELECTOR = "nav.nav-bar > button.nav-bar__button:first-child"
     HOME_CONTAINER_SELECTOR = "div.home__container"
-
-    def set_driver_fixture(self, driver):
-        self.driver = driver
-        self.wait_short = WebDriverWait(self.driver, 5)
-        self.wait_long = WebDriverWait(self.driver, 15)
-        if not os.path.exists("screenshots"):
-            os.makedirs("screenshots")
-
-    def setUp(self):
-        if not hasattr(self, 'driver') or not self.driver:
-            logger.info("WebDriver not set by fixture, attempting fallback setup for direct unittest execution.")
-            try:
-                options = webdriver.ChromeOptions()
-                # options.add_argument('--headless')
-                # options.add_argument('--disable-gpu')
-                # options.add_argument('--window-size=1920,1080')
-                self.driver = webdriver.Chrome(options=options)
-                self.is_driver_managed_by_fallback = True
-                logger.info("Fallback WebDriver initialized for direct unittest execution.")
-            except Exception as e:
-                logger.error(f"Failed to initialize fallback WebDriver: {e}")
-                self.fail(f"Failed to initialize fallback WebDriver: {e}")
-        else:
-            logger.info("WebDriver already set, likely by a pytest fixture.")
-            self.is_driver_managed_by_fallback = False
-        
-        if hasattr(self, 'driver') and self.driver:
-            self.set_driver_fixture(self.driver)
-        else:
-            logger.error("Driver is not initialized after setup attempt.")
-            self.fail("Driver could not be initialized.")
-            return
-
-        self._initial_setup()
-
-    def tearDown(self):
-        if hasattr(self, 'is_driver_managed_by_fallback') and self.is_driver_managed_by_fallback:
-            if self.driver:
-                self.driver.quit()
-                logger.info("Fallback WebDriver quit.")
-        else:
-            logger.info("Driver teardown managed by pytest fixture (if applicable).")
-
-    def _take_screenshot(self, name_suffix):
-        timestamp = int(time.time())
-        test_method_name = getattr(self, '_testMethodName', 'unknown_test')
-        screenshot_name = f"screenshots/{test_method_name}_{name_suffix}_{timestamp}.png"
-        try:
-            if hasattr(self, 'driver') and self.driver:
-                self.driver.save_screenshot(screenshot_name)
-                logger.info(f"Screenshot saved: {screenshot_name}")
-        except Exception as e:
-            logger.error(f"Error saving screenshot {screenshot_name}: {e}")
 
     def _initial_setup(self):
         if not hasattr(self, 'driver') or not self.driver:
@@ -104,9 +54,19 @@ class US04Tests(unittest.TestCase):
             )
             logger.info(f"Alert overlay '{self.ALERT_OVERLAY_SELECTOR}' is no longer visible. App should be on Settings page.")
             
-            nav_back_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
-            )
+            # Try CSS selector first, fall back to XPath if needed
+            try:
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector.")
+            except TimeoutException:
+                logger.info("CSS selector failed for back button, trying XPath...")
+                nav_back_button = WebDriverWait(self.driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                logger.info("Found back button using XPath selector.")
+                
             nav_back_button.click()
             logger.info("Clicked nav back button to return to Home page.")
 
@@ -153,9 +113,18 @@ class US04Tests(unittest.TestCase):
 
         if on_result_page:
             logger.info("Currently on result page (detected by element presence), navigating back to home to add grades.")
-            nav_back_button = self.wait_long.until(
-                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
-            )
+            try:
+                nav_back_button = self.wait_short.until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector in _add_grade_and_percentage.")
+            except TimeoutException:
+                logger.info("CSS selector failed for back button in _add_grade_and_percentage, trying XPath...")
+                nav_back_button = self.wait_long.until(
+                    EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                )
+                logger.info("Found back button using XPath selector in _add_grade_and_percentage.")
+                
             nav_back_button.click()
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info("Navigated back to home page.")
@@ -209,53 +178,6 @@ class US04Tests(unittest.TestCase):
         logger.info(f"Clicked 'Agregar nota' after filling grade: {grade}, percentage: {percentage} into the last available row.")
         time.sleep(0.5) # Brief pause for UI to update, e.g., adding a new empty row
 
-    def _get_current_weighted_average(self):
-        raw_text = ""
-        try:
-            average_element = self.wait_long.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.CURRENT_AVERAGE_DISPLAY_SELECTOR))
-            )
-            time.sleep(0.2) 
-            
-            raw_text = average_element.text.strip()
-            attempts = 0
-            while raw_text == "" and attempts < 5: 
-                logger.info(f"Average text is empty, attempt {attempts+1}/5. Waiting and retrying...")
-                time.sleep(0.3)
-                raw_text = average_element.text.strip()
-                attempts += 1
-            
-            logger.info(f"Raw current weighted average text from result page: '{raw_text}'")
-            if not raw_text:
-                logger.warning("Current weighted average text is empty after retries on result page.")
-                self._take_screenshot("empty_current_average_result_page")
-                return "Error: Empty Value"
-
-            # Regex to find a number (integer or float) after "promedio de "
-            match = re.search(r"Actualmente tienes un promedio de (\d+\.?\d*|\.\d+) en el", raw_text)
-            if match:
-                grade_str = match.group(1)
-                logger.info(f"Extracted grade string: '{grade_str}'")
-                return float(grade_str)
-            else:
-                logger.error(f"Could not parse final grade from text: '{raw_text}'")
-                self._take_screenshot("current_average_parse_error_result")
-                return "Error: Parse"
-        except TimeoutException:
-            logger.error(f"Timeout waiting for result page elements or current weighted average display: {self.CURRENT_AVERAGE_DISPLAY_SELECTOR}")
-            logger.info(f"Current URL: {self.driver.current_url}")
-            # logger.info(f"Page source at timeout:\\n{self.driver.page_source[:2000]}") # Potentially too verbose
-            self._take_screenshot("current_average_timeout_result_page")
-            return "Error: Timeout"
-        except ValueError:
-            logger.error(f"Could not convert extracted grade string to float from '{raw_text}'.")
-            self._take_screenshot("current_average_value_error_result")
-            return "Error: Conversion"
-        except Exception as e:
-            logger.error(f"Error getting current weighted average from result page: {e}", exc_info=True)
-            self._take_screenshot("get_current_average_error_result")
-            return "Error: General"
-
     def test_us04_verify_calculation_of_current_weighted_average(self):
         test_name = self._testMethodName
         logger.info(f"Running test: {test_name}")
@@ -271,7 +193,19 @@ class US04Tests(unittest.TestCase):
 
             if on_result_page_initial:
                 logger.info("Initial state is result page, navigating back to home.")
-                self.driver.find_element(By.XPATH, self.NAV_BACK_BUTTON_XPATH).click()
+                try:
+                    nav_back_button_initial = self.wait_short.until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                    )
+                    logger.info("Found initial back button using CSS selector.")
+                except TimeoutException:
+                    logger.info("CSS selector failed for initial back button, trying XPath...")
+                    nav_back_button_initial = self.wait_long.until(
+                        EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
+                    )
+                    logger.info("Found initial back button using XPath selector.")
+                    
+                nav_back_button_initial.click()
                 self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             else:
                 try:
@@ -302,10 +236,43 @@ class US04Tests(unittest.TestCase):
 
             # --- Navigate back for Test Step 2 ---
             logger.info("Navigating back to home page for 2nd grade.")
-            nav_back_button_step1 = self.wait_long.until(
-                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
-            )
+            # Try both selectors with a more extended wait time
+            try:
+                logger.info("Attempting to find back button with CSS selector...")
+                self._take_screenshot("before_finding_back_button_step1")
+                nav_back_button_step1 = self.wait_long.until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector for step 1.")
+            except TimeoutException:
+                logger.warning("CSS selector failed for back button in step 1, trying XPath with more wait time...")
+                # Take debug screenshot
+                self._take_screenshot("css_selector_failed_step1")
+                # Try a more verbose approach to locate the button
+                try:
+                    # First, check if there's a nav bar
+                    nav_bar = self.wait_long.until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "nav.nav-bar"))
+                    )
+                    logger.info("Nav bar found, looking for the first button inside it...")
+                    nav_buttons = nav_bar.find_elements(By.TAG_NAME, "button")
+                    if nav_buttons:
+                        nav_back_button_step1 = nav_buttons[0]  # First button in the nav bar
+                        logger.info("Using first button in nav bar")
+                    else:
+                        logger.error("No buttons found in nav bar")
+                        self._take_screenshot("no_buttons_in_nav_bar")
+                        self.fail("No buttons found in nav bar")
+                except Exception as e:
+                    logger.error(f"Error finding nav bar or buttons: {e}")
+                    self._take_screenshot("error_finding_nav_elements")
+                    self.fail(f"Error finding nav bar or buttons: {e}")
+                    
+            # Click the back button once found
             nav_back_button_step1.click()
+            logger.info("Clicked on back button for step 1")
+            self._take_screenshot("after_back_button_click_step1")
+            
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info(f"Navigated back to home page for 2nd grade.")
 
@@ -328,10 +295,41 @@ class US04Tests(unittest.TestCase):
 
             # --- Navigate back for Test Step 3 ---
             logger.info("Navigating back to home page for 3rd grade.")
-            nav_back_button_step2 = self.wait_long.until(
-                EC.element_to_be_clickable((By.XPATH, self.NAV_BACK_BUTTON_XPATH))
-            )
+            # Try both selectors with a more extended wait time
+            try:
+                logger.info("Attempting to find back button with CSS selector for step 2...")
+                self._take_screenshot("before_finding_back_button_step2")
+                nav_back_button_step2 = self.wait_long.until(
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, self.NAV_BACK_BUTTON_SELECTOR))
+                )
+                logger.info("Found back button using CSS selector for step 2.")
+            except TimeoutException:
+                logger.warning("CSS selector failed for back button in step 2, trying alternative approaches...")
+                self._take_screenshot("css_selector_failed_step2")
+                try:
+                    # First, check if there's a nav bar
+                    nav_bar = self.wait_long.until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "nav.nav-bar"))
+                    )
+                    logger.info("Nav bar found, looking for the first button inside it...")
+                    nav_buttons = nav_bar.find_elements(By.TAG_NAME, "button")
+                    if nav_buttons:
+                        nav_back_button_step2 = nav_buttons[0]  # First button in the nav bar
+                        logger.info("Using first button in nav bar")
+                    else:
+                        logger.error("No buttons found in nav bar")
+                        self._take_screenshot("no_buttons_in_nav_bar_step2")
+                        self.fail("No buttons found in nav bar for step 2")
+                except Exception as e:
+                    logger.error(f"Error finding nav bar or buttons for step 2: {e}")
+                    self._take_screenshot("error_finding_nav_elements_step2")
+                    self.fail(f"Error finding nav bar or buttons for step 2: {e}")
+                    
+            # Click the back button once found
             nav_back_button_step2.click()
+            logger.info("Clicked on back button for step 2")
+            self._take_screenshot("after_back_button_click_step2")
+            
             self.wait_long.until(EC.presence_of_element_located((By.CSS_SELECTOR, self.HOME_CONTAINER_SELECTOR)))
             logger.info(f"Navigated back to home page for 3rd grade.")
 
@@ -362,6 +360,3 @@ class US04Tests(unittest.TestCase):
             self.fail(f"Exception in {test_name}: {e}")
 
         logger.info(f"Test {test_name} completed successfully.")
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2)
